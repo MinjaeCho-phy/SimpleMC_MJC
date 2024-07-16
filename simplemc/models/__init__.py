@@ -41,4 +41,8 @@ from .HermitWaveletCDMCosmology import HermitWaveletCDMCosmology
 from .TonatiuhCDMCosmology import TonatiuhCDMCosmology
 from .OscillatingEOS import OscillatingEOS
 from .LsCDMCosmology import LsCDMCosmology
+from .DonatellaCosmology import DonatellaCosmology
+from .CarlevaroCosmology import CarlevaroCosmology
+from .BarrowHDECosmology import BarrowHDECosmology
+from .wdmGPCosmology import wdmGPCosmology
 #from .ePhiCDMCosmology import ePhiCosmology

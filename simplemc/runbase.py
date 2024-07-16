@@ -36,7 +36,10 @@ from .models import HermitWaveletCDMCosmology
 from .models import TonatiuhCDMCosmology
 from .models import OscillatingEOS
 from .models import LsCDMCosmology
-
+from .models import DonatellaCosmology
+from .models import CarlevaroCosmology
+from .models import BarrowHDECosmology
+from .models import wdmGPCosmology
 #Generic model
 from .models.SimpleModel import SimpleModel, SimpleCosmoModel
 
@@ -49,8 +52,9 @@ from .likelihoods.LikelihoodMultiplier import LikelihoodMultiplier
 # Likelihood modules
 from .likelihoods.BAOLikelihoods import DR11LOWZ, DR11CMASS, DR14LyaAuto, DR14LyaCross, \
                                         SixdFGS, SDSSMGS, DR11LyaAuto, DR11LyaCross, eBOSS, \
-                                        DR12Consensus, DR16BAO
-from .likelihoods.SimpleCMBLikelihood import PlanckLikelihood, PlanckLikelihood_15, WMAP9Likelihood
+                                        DR12Consensus, DR16BAO, DESY6_plus_DR16BAO, DESI_DR1, \
+                                        DESY6_plus_DESI_DR1
+from .likelihoods.SimpleCMBLikelihood import PlanckLikelihood, PlanckLikelihood_15, PlanckLikelihood_18, WMAP9Likelihood
 from .likelihoods.CompressedSNLikelihood import BetouleSN, UnionSN
 from .likelihoods.SNLikelihood import JLASN_Full
 from .likelihoods.PantheonSNLikelihood import PantheonSN, BinnedPantheon
@@ -190,6 +194,16 @@ def ParseModel(model, **kwargs):
         T = TonatiuhCDMCosmology(varyqcmade=False)
     elif model == 'tonatiuhcdm_novary':
         T = TonatiuhCDMCosmology(varycmade=False, varyqcmade=False)
+    elif model == 'donatella':
+        T = DonatellaCosmology(varyOk=False)
+    elif model == 'donatella_curv':
+        T = DonatellaCosmology()
+    elif model == 'carlevaro':
+        T = CarlevaroCosmology()
+    elif model == 'zapata':
+        T = BarrowHDECosmology()
+    elif model == 'wdmGP':
+        T = wdmGPCosmology()
     elif model == 'oscillating1':
         T = OscillatingEOS(varyw2 = False, model='model1')
     elif model == 'oscillating2':
@@ -343,10 +357,24 @@ def ParseDataset(datasets, **kwargs):
         #        DR14LyaCross()])
         elif name == 'DR16BAO':
             L.addLikelihood(DR16BAO())
+        elif name == 'DESY6_plus_DR16BAO':
+            L.addLikelihood(DESY6_plus_DR16BAO())
+        elif name == 'DESI_DR1':
+            L.addLikelihood(DESI_DR1())
+        elif name == 'DESI_DR1_lya':
+            L.addLikelihoods([
+                DESI_DR1(),
+                DR14LyaAuto(),
+                DR14LyaCross()
+            ])
+        elif name == 'DESY6_plus_DESI_DR1':
+            L.addLikelihood(DESY6_plus_DESI_DR1())
         elif name == 'Planck':
             L.addLikelihood(PlanckLikelihood())
         elif name == 'Planck_15':
             L.addLikelihood(PlanckLikelihood_15())
+        elif name == 'Planck_18':
+            L.addLikelihood(PlanckLikelihood_18())
         elif name == 'WMAP':
             L.addLikelihood(WMAP9Likelihood())
         elif name == 'PlRd':
@@ -366,7 +394,7 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihood(BinnedPantheon())
         elif name == 'JLA':
             L.addLikelihood(JLASN_Full())
-        elif name == 'SN':
+        elif name == 'SN':  
             L.addLikelihood(BetouleSN())
         elif name == 'SNx10':
             L.addLikelihood(LikelihoodMultiplier(BetouleSN(), 100.0))

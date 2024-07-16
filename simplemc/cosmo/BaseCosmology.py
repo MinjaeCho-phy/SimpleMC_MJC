@@ -218,6 +218,7 @@ class BaseCosmology:
 
     def fs8(self, z):
         # The growth factor.
+        #return -self.s8*(1+z)*derivative(self.growth, z, dx=1e-6)/self.growth(z)
         return -self.s8*(1+z)*derivative(self.growth, z, dx=1e-6)/self.growth(0)
 
 

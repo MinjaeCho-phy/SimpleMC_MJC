@@ -56,6 +56,36 @@ class DR16BAO(DR16BAOLikelihood):
         DR16BAOLikelihood.__init__(self, "DR16BAO", cdir+"/data/dr16_bao.dat",
                                               fidTheory)
 
+class DESY6_plus_DR16BAO(DR16BAOLikelihood):
+    def __init__(self):
+        obh2 = 0.022
+        Om   = 0.31
+        h    = 0.676
+        mnu  = 0.06
+        fidTheory = LCDMCosmology(obh2, Om, h, mnu)
+        DR16BAOLikelihood.__init__(self, "DESY6_plus_DR16BAO", cdir+"/data/desy6+dr16_bao.dat",
+                                              fidTheory)
+
+class DESI_DR1(DR16BAOLikelihood):
+    def __init__(self):
+        obh2 = 0.022
+        Om   = 0.2644
+        h    = 0.6736
+        mnu  = 0.06
+        fidTheory = LCDMCosmology(obh2, Om, h, mnu)
+        DR16BAOLikelihood.__init__(self, "DESI_DR1", cdir+"/data/desi_dr1.dat",
+                                              fidTheory)
+
+class DESY6_plus_DESI_DR1(DR16BAOLikelihood):
+    def __init__(self):
+        obh2 = 0.022 #0.022
+        Om   = 0.31 #0.2644
+        h    = 0.676 #0.6736
+        mnu  = 0.06 #0.06
+        fidTheory = LCDMCosmology(obh2, Om, h, mnu)
+        DR16BAOLikelihood.__init__(self, "DESY6_plus_DESI_DR1", cdir+"/data/desy6+desi_dr1.dat",
+                                              fidTheory)
+
 
 class DR11LyaAuto(TabulatedBAOLikelihood):
     def __init__(self):

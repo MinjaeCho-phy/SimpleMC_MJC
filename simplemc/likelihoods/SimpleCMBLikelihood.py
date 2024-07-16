@@ -72,6 +72,15 @@ class PlanckLikelihood_15(SimpleCMBLikelihood):
         SimpleCMBLikelihood.__init__(self,name,mean,cov, kill_Da, kill_rd)
 
 
+#Calibrated with plikHM_TTTEEE_lowTEB
+class PlanckLikelihood_18(SimpleCMBLikelihood):
+    def __init__(self, kill_Da= False, kill_rd= False):
+        mean = sp.array([2.23619584e-02,   1.425557737e-01,   9.43342292580e+01])
+        cov = sp.array([[ 2.2280476e-08,  -9.5339119e-08,  -1.5060900e-06],
+                 [ -9.5339119e-08,   1.6369370e-06,   1.1826342e-05],
+                 [ -1.5060900e-06,   1.1826342e-05,   7.9308203e-04 ]])
+        name = "SPlanck_18"
+        SimpleCMBLikelihood.__init__(self,name,mean,cov, kill_Da, kill_rd)
 
 class WMAP9Likelihood(SimpleCMBLikelihood):
     def __init__(self, kill_Da=False, kill_rd=False):

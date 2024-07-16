@@ -43,7 +43,7 @@ class PantheonSNLikelihood(BaseLikelihood):
         self.zinter = np.linspace(1e-3, self.zmaxi, ninterp)
         self.icov = la.inv(self.cov)
         '''
-
+   
         self.name_ = name
         BaseLikelihood.__init__(self, name)
         print("Loading", values_filename)

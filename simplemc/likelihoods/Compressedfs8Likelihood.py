@@ -39,6 +39,7 @@ class Compressedfs8Likelihood(BaseLikelihood):
 
     def loglike(self):
         tvec = sp.array([self.theory_.fs8(z) for z in self.zs])
+        #tvec += 0
         delta = tvec - self.fs8
         return -sp.dot(delta, sp.dot(self.icov, delta))/2.0
 
@@ -47,5 +48,5 @@ class Compressedfs8Likelihood(BaseLikelihood):
 class fs8Diagram(Compressedfs8Likelihood):
     # data from arXiv:1806.10822   puede ser fs8Diagram o fs8_eleonora
     def __init__(self):
-        Compressedfs8Likelihood.__init__(self,"fs8", cdir+"/data/fs8_eleonora.txt",
-                                         cdir+"/data/fs8_eleonora-cov.txt")
+        Compressedfs8Likelihood.__init__(self,"fs8", cdir+"/data/fs8Diagram.txt",
+                                         cdir+"/data/fs8Diagram-cov.txt")

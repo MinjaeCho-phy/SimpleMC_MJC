@@ -105,7 +105,7 @@ b_par = Parameter("b", 0., 0.5, (-10., 10.), "b")
 
 # Compress data
 # where the first bin is fix.
-Nbins = 15
+Nbins = 40
 step  = (13-1.3)/(Nbins-1)
 zbin_par = [Parameter("zbin%d"%i, 1.3+step*i, 0.3, (step*i, 3+step*i), "zbin%d"%i) for i in range(Nbins)]
 
@@ -187,8 +187,9 @@ zcross_wave_par = Parameter("zcross_wave", 2.0, 0.1, (0.0,5.0), "z^{\dagger}")
 
 #params supriya
 w1_par = Parameter("w1", -1.0, 0.2,(-2.0, 0.0), "w_1")
-w2_par = Parameter("w2", 0.0, 0.5,(-3.0, 3.0), "w_2")
-b_oscil_par = Parameter("b_oscil", 0.0, 0.5, (-3.0, 3.0), "b")
+w2_par = Parameter("w2", 0.0, 0.5,(-5.0, 5.0), "w_2")
+b_oscil_par = Parameter("b_oscil", 0.0, 0.5, (-5.0, 5.0), "b")
+ac_par = Parameter("ac", 1.0, 0.5, (0.001, 10.0), "a_c") 
 
 #tonatiuhcdm
 cmade_par = Parameter("cmade", 0.9, 0.1, (0.1, 1.0), "cmade")
@@ -196,4 +197,13 @@ qcmade_par = Parameter("qcmade", 1.0, 0.2, (-2.0, 2.0), "Q")
 
 
 #LsCDM
-zt_par = Parameter("zt", 1.0, 0.1, (1.0,3.0), "z_t")
+zt_par = Parameter("zt", 1.0, 0.1, (0.5,3.0), "z_t")
+
+#Donatella model
+cd_par = Parameter("cd", 0.16, 0.05, (0.0,1.0), "c")
+
+#Carlevaro
+C1_par = Parameter("C1", 0.2, 0.01, (0.05,0.65), "C_1")
+C2_par = Parameter("C2", 2.5, 0.1, (1.0,5.0), "C_2")
+Delta0_par = Parameter("Delta0", 0.2, 0.05, (0.1,1.5), "\Delta_0")
+

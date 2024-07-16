@@ -43,4 +43,5 @@ class wCDMCosmology(LCDMCosmology):
     ## i.e. H(z)^2/H(z=0)^2
     def RHSquared_a(self, a):
         NuContrib = self.NuDensity.rho(a)/self.h**2
-        return (self.Ocb/a**3+self.Omrad/a**4+NuContrib+(1.0-self.Om)*a**(-3*(1.0+self.w)))
+        return (self.Ocb/a**3+(1.0-self.Om)*a**(-3*(1.0+self.w)))
+        #return (self.Ocb/a**3+self.Omrad/a**4+NuContrib+(1.0-self.Om)*a**(-3*(1.0+self.w)))
