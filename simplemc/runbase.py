@@ -3,43 +3,8 @@ import sys
 
 # Cosmologies already included
 from .models import LCDMCosmology
-from .models import oLCDMCosmology
-from .models import wCDMCosmology
-from .models import owa0CDMCosmology
-from .models import PolyCDMCosmology
-from .models import JordiCDMCosmology
-from .models import WeirdCDMCosmology
-from .models import TiredLightDecorator
-from .models import DecayLCDMCosmology
-from .models import EarlyDECosmology
-from .models import SlowRDECosmology
-from .models import DGPCDMCosmology
-from .models import AnisotropicCosmology
-from .models import GraduatedCosmology
-from .models import QuintomCosmology
-from .models import RotationCurves
+from .models import DFT1Cosmology
 
-#Non-parametric functions
-from .models import SplineLCDMCosmology
-from .models import StepCDMCosmology
-from .models import BinnedWCosmology
-from .models import CompressPantheon
-from .models import TanhCosmology
-from .models import GPCosmology
-from .models import IDECosmology
-from .models import IDEEOSCosmology
-from .models import IDEGPCosmology
-from .models import IDEEOSGPCosmology
-from .models import IDESignSwitchCosmology
-from .models import WiggleCDMCosmology
-from .models import HermitWaveletCDMCosmology
-from .models import TonatiuhCDMCosmology
-from .models import OscillatingEOS
-from .models import LsCDMCosmology
-from .models import DonatellaCosmology
-from .models import CarlevaroCosmology
-from .models import BarrowHDECosmology
-from .models import wdmGPCosmology
 #Generic model
 from .models.SimpleModel import SimpleModel, SimpleCosmoModel
 
@@ -60,24 +25,18 @@ from .likelihoods.SNLikelihood import JLASN_Full
 from .likelihoods.PantheonSNLikelihood import PantheonSN, BinnedPantheon
 from .likelihoods.CompressedHDLikelihood import HubbleDiagram
 from .likelihoods.Compressedfs8Likelihood import fs8Diagram
-from .likelihoods.HubbleParameterLikelihood import RiessH0
+from .likelihoods.HubbleParameterLikelihood import RiessH0, Minjae
+from .likelihoods.FineStructureConstantLikelihood import FSC
 
 from .likelihoods.SimpleLikelihood import GenericLikelihood
 from .likelihoods.SimpleLikelihood import StraightLine
 from .likelihoods.RotationCurvesLikelihood import RotationCurvesLike
 
-#Importance Sampling
-#from .CosmoMCImportanceSampler import *
-
-
 # String parser Aux routines
-model_list = "LCDOM, LCDMasslessnu, nuLCDM, NeffLCDM, noradLCDM, nuoLCDM, nuwLCDM, oLCDM, wCDM, waCDM, owCDM,"\
-    "owaCDM, JordiCDM, WeirdCDM, TLight, StepCDM, Spline, PolyCDM, fPolyCDM, Decay, Decay01, Decay05,"\
-    "EarlyDE, EarlyDE_rd_DE, SlowRDE"
-
+model_list = "LCDM, DFT1"
 
 def ParseModel(model, **kwargs):
-    """ 
+    """ 
     Parameters
     -----------
     model:
@@ -93,159 +52,8 @@ def ParseModel(model, **kwargs):
 
     if model == "LCDM":
         T = LCDMCosmology()
-    elif model == "LCDMmasslessnu":
-        T = LCDMCosmology(mnu=0)
-    elif model == "nuLCDM":
-        T = LCDMCosmology()
-        T.setVaryMnu()
-    elif model == "NeffLCDM":
-        LCDMCosmology.rd_approx = "CuestaNeff"
-        T = LCDMCosmology()
-        T.setVaryNnu()
-    elif model == "NumuLCDM":
-        LCDMCosmology.rd_approx = "CuestaNeff"
-        T = LCDMCosmology()
-        T.setVaryNnu()
-        T.setVaryMnu()
-    elif model == "noradLCDM":
-        T = LCDMCosmology(disable_radiation=True)
-    elif model == "oLCDM":
-        T = oLCDMCosmology()
-    elif model == "nuoLCDM":
-        T = oLCDMCosmology()
-        T.setVaryMnu()
-    elif model == "wCDM":
-        T = wCDMCosmology()
-    elif model == "LsCDM":
-        T = LsCDMCosmology()
-    elif model == "nuwCDM":
-        T = wCDMCosmology()
-        T.setVaryMnu()
-    elif model == "CPL":
-        T = owa0CDMCosmology(varyOk=False)
-    elif model == "owCDM":
-        T = owa0CDMCosmology(varywa=False)
-    elif model == "owaCDM":
-        T = owa0CDMCosmology()
-    elif model == "JordiCDM":
-        T = JordiCDMCosmology()
-    elif model == "WeirdCDM":
-        T = WeirdCDMCosmology()
-    elif model == "TLight":
-        T = TiredLightDecorator(PolyCDMCosmology())
-    elif model == "StepCDM":
-        T = StepCDMCosmology()
-    elif model == "Spline":
-        T = SplineLCDMCosmology()
-    elif model == "DecayFrac":
-        T = DecayLCDMCosmology()
-    elif model == "Decay":
-        T = DecayLCDMCosmology(varyxfrac=False, xfrac=1.0)
-    elif model == "Decay01":
-        T = DecayLCDMCosmology(varyxfrac=False, xfrac=0.1)
-    elif model == "Decay05":
-        T = DecayLCDMCosmology(varyxfrac=False, xfrac=0.5)
-    elif model == "PolyCDM":
-        T = PolyCDMCosmology()
-    elif model == "fPolyCDM":
-        T = PolyCDMCosmology(polyvary=['Om1', 'Om2'])
-    elif model == "PolyOk": ## polycdm for OK
-        T = PolyCDMCosmology(Ok_prior=10.)
-    elif model == "PolyOkc": ## polycdm sans Om2 term to couple two
-        T = PolyCDMCosmology(polyvary=['Om1', 'Ok'], Ok_prior=10.)
-    elif model == "PolyOkf": ## polycdm sans Om2 term to couple two
-        T = PolyCDMCosmology(polyvary=['Om1', 'Om2'])
-    elif model == "EarlyDE":
-        T = EarlyDECosmology(varyw=False, userd_DE=False)
-    elif model == "EarlyDE_rd_DE":
-        T = EarlyDECosmology(varyw=False)
-    elif model == "SlowRDE":
-        T = SlowRDECosmology(varyOk=False)
-    elif model == "Anisotropic":
-        T = AnisotropicCosmology(varybd=False)
-        LCDMCosmology.rd_approx = "CuestaNeff"
-        T.setVaryNnu()
-        T.setVaryMnu()
-    elif model == "Binned":
-        T = BinnedWCosmology()
-    elif model == "eos_tanh20_eta015":
-        T = TanhCosmology()
-    elif model == "eos_GP4":
-        T = GPCosmology()
-    elif model == "idetanh5_betoprior":
-        T = IDECosmology()
-    elif model == "ide_eos_tanh5_cutprior":
-        T = IDEEOSCosmology()
-    elif model == "idegp5_betoprior":
-        T = IDEGPCosmology()
-    elif model == "ide_eos_gp5_cutprior":
-        T = IDEEOSGPCosmology()
-    elif model == 'idegp5_betoprior_nowide':
-        T = IDEGPCosmology(varyw_ide=False)
-    elif model == 'idetanh5_betoprior_nowide':
-        T = IDECosmology(varyw_ide=False)
-    elif model == 'ideSSIK_varying':
-        T = IDESignSwitchCosmology()
-    elif model == 'tonatiuhcdm_doublevary':
-        T = TonatiuhCDMCosmology()
-    elif model == 'tonatiuhcdm_doublevary_nocurv':
-        T = TonatiuhCDMCosmology(varyOk=False)
-    elif model == 'tonatiuhcdm_vary':
-        T = TonatiuhCDMCosmology(varyqcmade=False)
-    elif model == 'tonatiuhcdm_novary':
-        T = TonatiuhCDMCosmology(varycmade=False, varyqcmade=False)
-    elif model == 'donatella':
-        T = DonatellaCosmology(varyOk=False)
-    elif model == 'donatella_curv':
-        T = DonatellaCosmology()
-    elif model == 'carlevaro':
-        T = CarlevaroCosmology()
-    elif model == 'zapata':
-        T = BarrowHDECosmology()
-    elif model == 'wdmGP':
-        T = wdmGPCosmology()
-    elif model == 'oscillating1':
-        T = OscillatingEOS(varyw2 = False, model='model1')
-    elif model == 'oscillating2':
-        T = OscillatingEOS(varyw2 = False, model='model2')
-    elif model == 'oscillating3':
-        T = OscillatingEOS(varyw2 = False, model='model3')
-    elif model == 'oscillating4':
-        T = OscillatingEOS(varyw2 = False, model='model4')
-    elif model == 'wigglecdm':
-        T = WiggleCDMCosmology()
-    elif model == 'hermit_wavelet_psi1':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_1')
-    elif model == 'hermit_wavelet_psi2':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_2')
-    elif model == 'hermit_wavelet_psi3':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_3')
-    elif model == 'hermit_wavelet_psi4':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_4')
-    elif model == 'hermit_wavelet_h73pm1_psi1':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_1')
-    elif model == 'hermit_wavelet_h73pm1_psi2':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_2')
-    elif model == 'hermit_wavelet_h73pm1_psi3':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_3')
-    elif model == 'hermit_wavelet_h73pm1_psi4':
-        T = HermitWaveletCDMCosmology(type_wavelet='hermitian_4')
-    elif model == 'CPantheon':
-        T = CompressPantheon()
-    elif model == 'DGP':
-        T = DGPCDMCosmology()
-    elif model == 'Grad_Ok':
-        T = GraduatedCosmology(varyOk=True)
-    elif model == 'Quintess':
-        T = QuintomCosmology(vary_mquin=True)
-    elif model == 'Phantom':
-        T = QuintomCosmology(vary_mphan=True)
-    elif model == 'Quintom':
-        T = QuintomCosmology(vary_mquin=True, vary_mphan=True)
-    elif model == 'Quintom_couple':
-        T = QuintomCosmology(vary_mquin=True, vary_mphan=True, vary_coupling=True)
-    elif model == "Rotation":
-        T = RotationCurves()
+    elif model == "DFT1":
+        T = DFT1Cosmology()
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':
@@ -258,11 +66,11 @@ def ParseModel(model, **kwargs):
 
 
 data_list = "BBAO, GBAO, GBAO_no6dF, CMASS, LBAO, LaBAO, LxBAO, MGS, Planck, WMAP, PlRd, WRd, PlDa, PlRdx10,"\
-    "CMBW, SN, SNx10, UnionSN, RiessH0, 6dFGS"
+    "CMBW, SN, SNx10, UnionSN, RiessH0, 6dFGS, Minjae, FSC"
 
 
 def ParseDataset(datasets, **kwargs):
-    """ 
+    """ 
     Parameters
     -----------
     datasets:
@@ -402,6 +210,10 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihood(UnionSN())
         elif name == 'RiessH0':
             L.addLikelihood(RiessH0())
+        elif name == 'Minjae':
+            L.addLikelihood(Minjae())
+        elif name == 'FSC':
+            L.addLikelihood(FSC())
         elif name == 'HD':
             L.addLikelihood(HubbleDiagram())
         elif name == 'fs8':

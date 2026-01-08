@@ -19,6 +19,7 @@ import warnings
 from functools import partial
 import math
 import copy
+import time
 import numpy as np
 import scipy as sp
 try:
@@ -88,7 +89,7 @@ class Sampler(object):
                  update_interval, first_update, rstate,
                  queue_size, pool, use_pool):
         self.print_txt = "\rit: {} | ncall: {} | eff: {:.3f} | logz: {:.4f} | " \
-                         "dlogz: {:.4f} | loglstar: {:.4f} | point {}"
+                         "dlogz: {:.4f} | loglstar: {:.4f} | point {} ({:.4f})/it"
 
         # distributions
         self.loglikelihood_control = loglikelihood
@@ -930,6 +931,7 @@ class Sampler(object):
         ncall = self.ncall
         # Open text file to save samples for SimpleMC
         f = open(self.outputname + '_1.txt', 'w+')
+        t0 = time.time()
         for it, results in enumerate(self.sample(maxiter=maxiter,
                                                  maxcall=maxcall,
                                                  dlogz=dlogz,
@@ -953,9 +955,16 @@ class Sampler(object):
             if print_progress:
                 # Writing weights, likes and samples in a text file for simplemc output.
                 weights = np.exp(results[5])
-                vstarstr = str(results[2]).lstrip('[').rstrip(']')
-                sys.stdout.write(self.print_txt.format(it, ncall, eff, logz, delta_logz, loglstar, vstarstr))
+                dt = (time.time() - t0) / (it + 1)
+                if self.like is not None:
+                    pnames = [p.name for p in self.cpars]
+                    point_with_names = " ".join([f"{n} = {v:.4f}" for n, v in zip(pnames, results[2])])
+                else:
+                    point_with_names = str(results[2]).lstrip('[').rstrip(']')
+                
+                sys.stdout.write(self.print_txt.format(it, ncall, eff, logz, delta_logz, loglstar, point_with_names, dt))
                 sys.stdout.flush()
+                vstarstr = str(results[2]).lstrip('[').rstrip(']')
 
                 if addDerived:
                     self.AD = AllDerived()
@@ -1033,7 +1042,8 @@ class Sampler(object):
 
         """
         ncall = self.ncall
-        sys.stdout.write("Adding final live points\n")
+        sys.stdout.write("\nAdding final live points\n")
+        t0 = time.time()
         for i, results in enumerate(self.add_live_points()):
             (worst, ustar, vstar, loglstar, logvol, logwt,
              logz, logzvar, h, nc, worst_it, boundidx, bounditer,
@@ -1045,8 +1055,15 @@ class Sampler(object):
 
             # Print progress.
             if print_progress:
+                dt = (time.time() - t0) / (i + 1)
+                if self.like is not None:
+                    pnames = [p.name for p in self.cpars]
+                    point_with_names = " ".join([f"{n} = {v:.4f}" for n, v in zip(pnames, results[2])])
+                else:
+                    point_with_names = str(results[2]).lstrip('[').rstrip(']')
+                
                 sys.stdout.write(self.print_txt.format(self.it+i, ncall, eff, logz,
-                                                                       delta_logz, loglstar, vstar))
+                                                                       delta_logz, loglstar, point_with_names, dt))
                 sys.stdout.flush()
 
 

@@ -47,7 +47,7 @@ class PantheonSNLikelihood(BaseLikelihood):
         self.name_ = name
         BaseLikelihood.__init__(self, name)
         print("Loading", values_filename)
-        data = pd.read_csv(values_filename,delim_whitespace=True)
+        data = pd.read_csv(values_filename, sep='\s+')
         self.origlen = len(data)
         self.ww = (data['zHD']>0.01)
         self.zcmb = data['zHD'][self.ww].values #use the vpec corrected redshift for zCMB
@@ -95,7 +95,8 @@ class PantheonSNLikelihood(BaseLikelihood):
                         kind='cubic', bounds_error=False)(self.zcmb)
         who = np.where(self.zcmb > self.zmaxi)
         dist[who] = np.array([self.theory_.distance_modulus(z) for z in self.zcmb[who]])
-        tvec = self.mag-dist
+        #tvec = self.mag-dist # Correct way
+        tvec = self.mag-dist-25+19.253 # Wrong way: Fixed absolute mag
 
         # tvec = self.mag-np.array([self.theory_.distance_modulus(z) for z in self.zcmb])
         # print (tvec[:10])
