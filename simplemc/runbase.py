@@ -4,6 +4,7 @@ import sys
 # Cosmologies already included
 from .models import LCDMCosmology
 from .models import DFT1Cosmology
+from .models.DFT2Cosmology import DFT2Cosmology
 
 #Generic model
 from .models.SimpleModel import SimpleModel, SimpleCosmoModel
@@ -23,6 +24,7 @@ from .likelihoods.SimpleCMBLikelihood import PlanckLikelihood, PlanckLikelihood_
 from .likelihoods.CompressedSNLikelihood import BetouleSN, UnionSN
 from .likelihoods.SNLikelihood import JLASN_Full
 from .likelihoods.PantheonSNLikelihood import PantheonSN, BinnedPantheon
+from .likelihoods.PantheonSNFixedLikelihood import PantheonSNFixed
 from .likelihoods.CompressedHDLikelihood import HubbleDiagram
 from .likelihoods.Compressedfs8Likelihood import fs8Diagram
 from .likelihoods.HubbleParameterLikelihood import RiessH0, Minjae
@@ -54,6 +56,8 @@ def ParseModel(model, **kwargs):
         T = LCDMCosmology()
     elif model == "DFT1":
         T = DFT1Cosmology()
+    elif model == "DFT2":
+        T = DFT2Cosmology()
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':
@@ -198,6 +202,8 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihood(WMAP9Likelihood())
         elif name == 'Pantheon':
             L.addLikelihood(PantheonSN())
+        elif name == 'Pantheon_fixed':
+            L.addLikelihood(PantheonSNFixed())
         elif name == 'BPantheon':
             L.addLikelihood(BinnedPantheon())
         elif name == 'JLA':

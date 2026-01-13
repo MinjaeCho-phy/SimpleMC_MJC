@@ -6,8 +6,10 @@ from simplemc.models.LCDMCosmology import LCDMCosmology
 #from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 import numpy as np
+import scipy.integrate as sp_int
+import scipy as sp
 import warnings
-from numba import njit
+from numba import njit, float64
 
 @njit(cache=True)
 def RHS_numba(z, y, h, Ok, Oh, OL, Oe, w):
@@ -75,20 +77,11 @@ def solve_ode_numba(y0, z_start, z_end, steps, h, Ok, Oh, OL, Oe, w):
         
     return z_vals, y_vals
 
-class DFT1Cosmology(LCDMCosmology):
+class DFT2Cosmology(LCDMCosmology):
     def __init__(self, h = h_par.value, Ok = Ok_par.value, Oh = dft_Oh_par.value, OL = dft_OL_par.value, Oe = dft_Oe_par.value, w = dft_w_par.value):
         """
-        Parameter info
-
-        h  : Hubble Constant / 100
-        Ok : Density Parameter for curvature, \Omega_k
-        Oh : Density Parameter for h-flux, \Omega_{\mathfrak{h}}
-        OL : Density Parameter for Cosmological Constant, \Omega_{\Lambda}
-        Oe : Density Parameter for general matter with EoS parameters (w,l), \Omega_{\epsilon}
-        w  : First Equation of State Parameter,  w = (pressure)/("energy" density)
+        DFT2Cosmology: Optimized version with precomputed distance integrals.
         """
-        """ This is the one mimicking 2308.07149 """
-        """ Parameter setting """
         self.h  = h
         self.Ok = Ok
         self.Oh = Oh
@@ -98,10 +91,12 @@ class DFT1Cosmology(LCDMCosmology):
 
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
         
-        # Increased steps for RK4 accuracy to match adaptive solver better if needed
-        # 500 might be enough, but let's be safe with 1000 or keep 500 and verify
-        self.rk_steps = 5000 
-        self.z_values = np.linspace(0.0, 8.0, 500) # This is just for interpolation grid def if used elsewhere
+        # High resolution for initial ODE solve
+        self.rk_steps = 1000 
+        # Output grid for interpolation. 
+        # Note: z=8.0 is usually enough for most datasets, but can be extended if needed.
+        self.z_max = 8.0
+        self.z_values = np.linspace(0.0, self.z_max, 500) 
         
         LCDMCosmology.__init__(self, mnu=0)
         self.updateParams([])
@@ -131,70 +126,87 @@ class DFT1Cosmology(LCDMCosmology):
         return True
 
     def RHS(self, z, y):
-        # Wrapper for backward compatibility if ever needed, though efficiency dictates using numba directly
         return RHS_numba(z, y, self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w)
 
     def initialize(self):
         y0 = np.array([0.0, self.h * 100.0])
         
-        # Use Numba solver
-        # Note: z_values[0] is 0.0, z_values[-1] is 8.0
+        # 1. Solve ODE
         z_out, y_out = solve_ode_numba(
             y0, 
             0.0, 
-            8.0, 
+            self.z_max, 
             self.rk_steps,
             self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w
         )
         
+        # 2. Extract H(z) on fine grid
+        H_fine = y_out[:, 1]
         
-        # y_out shape is (steps, 2), where column 0 is phi, column 1 is H
+        # 3. Compute Comoving Distance Integral on fine grid
+        # r(z) = integral(1/H(z)) dz  (roughly, need to check units)
+        # BaseCosmology uses DistIntegrand_a = 1./sqrt(RHSquared_a)/a^2
+        # Da_z = int(DistIntegrand_a) from 1/(1+z) to 1
+        # Let's stick to z-integration for simplicity if possible, or mapping a -> z
         
-        # To match the original behavior/accuracy (which used linear interpolation on 500 points),
-        # we downsample our high-resolution RK4 solution to the original grid.
-        # z_values has 500 points. rk_steps is 5000. 
-        # So we take every (rk_steps / 500)th point?
-        # Actually z_values is defined as linspace(0, 8, 500).
-        # Our solver uses linspace(0, 8, rk_steps).
-        # We need to ensure we pick the points corresponding to z_values.
+        # H(z) / H0 = E(z) = sqrt(RHSquared_a(a))
+        # RHSquared_a(a) = (H(z)/H0)^2
+        # DistIntegrand_a = 1/E(z) * (1/a^2) = 1/E(z) * (1+z)^2
+        # But we integrate da. da = -dz/(1+z)^2.
+        # Int(DistIntegrand_a da) = Int (1/E(z) * (1+z)^2 * -dz/(1+z)^2) 
+        #                         = Int (-1/E(z) dz)
+        # So r(z) = Int_0^z (1/E(z') dz')
         
-        # We can just interpolate our fine grid onto the coarse grid, or if it aligns, slice it.
-        # With 5000 steps, we have 5000 intervals, so 5001 points.
-        # 500 points means 499 intervals?
-        # Standard linspace(0, 8, 500) gives 500 points.
-        # Solver with 5000 steps (intervals) gives 5001 points usually?
-        # My solve_ode_numba returns `steps` points.
-        # np.linspace(start, end, steps)
-        # If I want to match linspace(0, 8, 500), I should probably just interpolate
-        # the fine solution onto self.z_values to be robust.
+        # E(z) = H_fine / (self.h * 100)
+        # Avoid division by zero at z=0 (H should be close to H0)
+        E_z = H_fine / (self.h * 100.0)
+        integrand = 1.0 / E_z
         
-        # Create temporary interpolator for the fine grid
-        phi_fine = interp1d(z_out, y_out[:, 0], kind='cubic', fill_value='extrapolate')
-        H_fine = interp1d(z_out, y_out[:, 1], kind='cubic', fill_value='extrapolate')
+        # Cumulative trapezoidal integration
+        r_fine = sp_int.cumulative_trapezoid(integrand, z_out, initial=0)
         
-        # Evaluate on the standard coarse grid
-        phi_coarse = phi_fine(self.z_values)
-        H_coarse = H_fine(self.z_values)
+        # 4. Create Interpolators
+        # We need Da_z(z) and H(z)
         
-        # Create the final interpolators used by the class (matching original "linear on 500 pts")
-        self.phiinterp = interp1d(self.z_values, phi_coarse, fill_value='extrapolate')
-        self.Hinterp = interp1d(self.z_values, H_coarse, fill_value='extrapolate')
+        self.Da_interp = interp1d(z_out, r_fine, kind='cubic', fill_value='extrapolate')
+        self.H_interp = interp1d(z_out, H_fine, kind='cubic', fill_value='extrapolate')
+        
+        # Also need phi for fine structure constant if needed
+        phi_fine = y_out[:, 0]
+        # We need phi(z) where z = 1/a - 1
+        self.phiinterp = interp1d(z_out, phi_fine, kind='cubic', fill_value='extrapolate')
+        
         return True
 
     def hub(self, z):
-        return self.Hinterp(z)
+        return self.H_interp(z)
+
+    # Override Da_z to use precomputed integral
+    def Da_z(self, z):
+        # BaseCosmology.Da_z computes the comoving distance r.
+        # Then applies curvature correction.
+        
+        r = self.Da_interp(z)
+        
+        if self.Curv == 0:
+            return r
+        elif (self.Curv > 0):
+            q = sp.sqrt(self.Curv)
+            return sp.sinh(r*q)/(q)
+        else:
+            q = sp.sqrt(-self.Curv)
+            return sp.sin(r*q)/(q)
 
     def fine_structure_constant(self, a):
-        phi_val = self.phiinterp(1.0/a - 1.0)
+        z = 1.0/a - 1.0
+        phi_val = self.phiinterp(z)
         # Clamp phi to prevent overflow
         phi_clamped = np.clip(phi_val, -50, 50)
         return np.exp(2.0 * phi_clamped) - 1.0
 
     def RHSquared_a(self, a):
+        # Used by growth factor calculation if standard logic called
         z = 1/a - 1.0
-        H0 = self.h * 100
         H = self.hub(z)
-        result = (H / H0)**2
-        if not np.isfinite(result) or result <= 0:
-            return 1e-30
-        return result
+        H0 = self.h * 100
+        return (H / H0)**2

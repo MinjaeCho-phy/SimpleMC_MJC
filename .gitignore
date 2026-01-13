@@ -1,3 +1,6 @@
 __py_cache__
+__pycache__/
 doc/
 *.pyc
+alter/
+*.pkl

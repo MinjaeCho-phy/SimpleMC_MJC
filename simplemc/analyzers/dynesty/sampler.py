@@ -954,7 +954,7 @@ class Sampler(object):
             # Print progress.
             if print_progress:
                 # Writing weights, likes and samples in a text file for simplemc output.
-                weights = np.exp(results[5])
+                weights = np.exp(results[5]+600)
                 dt = (time.time() - t0) / (it + 1)
                 if self.like is not None:
                     pnames = [p.name for p in self.cpars]
@@ -999,7 +999,7 @@ class Sampler(object):
                     logz = -np.inf
 
                 # Writing weights, likes and samples in a text file for simplemc output.
-                weights = np.exp(results[5])
+                weights = np.exp(results[5]+600)
                 vstarstr = str(results[2]).lstrip('[').rstrip(']')
 
                 if addDerived:

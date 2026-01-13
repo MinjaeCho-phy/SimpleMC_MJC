@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 from simplemc import cdir
 import pandas as pd
 
-class PantheonSNLikelihood(BaseLikelihood):
+class PantheonSNFixedLikelihood(BaseLikelihood):
     def __init__(self, name, values_filename, cov_filename, ninterp=150):
         """
         This module calculates likelihood for Pantheon datasets.
@@ -95,8 +95,8 @@ class PantheonSNLikelihood(BaseLikelihood):
                         kind='cubic', bounds_error=False)(self.zcmb)
         who = np.where(self.zcmb > self.zmaxi)
         dist[who] = np.array([self.theory_.distance_modulus(z) for z in self.zcmb[who]])
-        tvec = self.mag-dist # Correct way
-        #tvec = self.mag-dist-25+19.253 # Wrong way: Fixed absolute mag
+        #tvec = self.mag-dist # Correct way
+        tvec = self.mag-dist-25+19.253 # Wrong way: Fixed absolute mag
 
         # tvec = self.mag-np.array([self.theory_.distance_modulus(z) for z in self.zcmb])
         # print (tvec[:10])
@@ -109,19 +109,11 @@ class PantheonSNLikelihood(BaseLikelihood):
         return -chi2/2
 
 
-class PantheonSN(PantheonSNLikelihood):
+class PantheonSNFixed(PantheonSNFixedLikelihood):
     """
     Likelihood to full Pantheon SNIa compilation.
     """
     def __init__(self):
-        PantheonSNLikelihood.__init__(self, "Pantheon", cdir+"/data/pantheon+_lcparam_full_long_zhel.txt",
+        PantheonSNFixedLikelihood.__init__(self, "Pantheon", cdir+"/data/pantheon+_lcparam_full_long_zhel.txt",
                                       cdir+"/data/pantheon+_sys_full_long.txt")
 
-
-class BinnedPantheon(PantheonSNLikelihood):
-    """
-    Likelihood to binned Pantheon dataset.
-    """
-    def __init__(self):
-        PantheonSNLikelihood.__init__(self, "BPantheon", cdir+"/data/binned_pantheon.txt",
-                                      cdir+"/data/binned_cov_pantheon.txt")
