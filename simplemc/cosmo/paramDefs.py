@@ -22,7 +22,7 @@ mnu_par = Parameter("mnu", 0.06, 0.1, (0, 1.0), "\Sigma m_{\\nu}")
 Nnu_par = Parameter("Nnu", 3.046, 0.5, (3.0, 3.1), "N_{\\rm eff}")
 
 # Curvature and DE equation of state.
-Ok_par = Parameter("Ok", 0.9999, 0.001, (0.8, 1.1), "\Omega_k")
+Ok_par = Parameter("Ok", 0.9999, 0.001, (0.99999, 1.00001), "\Omega_k")
 
 # Sigma 8 parameter (required by BaseCosmology)
 s8_par = Parameter("s8", 0.8, 0.01, (0.5, 1.0), "s8")
