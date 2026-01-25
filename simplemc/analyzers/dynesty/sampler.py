@@ -471,8 +471,8 @@ class Sampler(object):
             point_it = self.live_it[idx]
 
             # Compute relative contribution to results.
-            logwt = np.logaddexp(loglstar_new, loglstar) + logdvol  # weight
-            logz_new = np.logaddexp(logz, logwt)  # ln(evidence)
+            logwt = np.logaddexp(float(loglstar_new), float(loglstar)) + logdvol  # weight
+            logz_new = np.logaddexp(float(logz), float(logwt))  # ln(evidence)
             lzterm = (math.exp(loglstar - logz_new) * loglstar +
                       math.exp(loglstar_new - logz_new) * loglstar_new)
             h_new = (math.exp(logdvol) * lzterm +
@@ -484,7 +484,7 @@ class Sampler(object):
             logzvar += 2. * dh * dlv  # var[ln(evidence)] estimate
             loglstar = loglstar_new
             logz_remain = loglmax + logvol  # remaining ln(evidence)
-            delta_logz = np.logaddexp(logz, logz_remain) - logz  # dlogz
+            delta_logz = np.logaddexp(float(logz), float(logz_remain)) - logz  # dlogz
 
             # Save results.
             if self.save_samples:
@@ -677,8 +677,8 @@ class Sampler(object):
             logzvar = self.saved_logzvar[-1]  # var[ln(evidence)]
             logvol = self.saved_logvol[-1]  # ln(volume)
             loglstar = min(self.live_logl)  # ln(likelihood)
-            delta_logz = np.logaddexp(logz, np.max(self.live_logl) +
-                                      logvol) - logz  # log-evidence ratio
+            delta_logz = np.logaddexp(float(logz), float(np.max(self.live_logl) +
+                                      logvol)) - logz  # log-evidence ratio
 
         # The main nested sampling loop.
         for it in range(sys.maxsize):
@@ -709,7 +709,7 @@ class Sampler(object):
             # Stopping criterion 3: estimated (fractional) remaining evidence
             # lies below some threshold set by `dlogz`.
             logz_remain = np.max(self.live_logl) + logvol
-            delta_logz = np.logaddexp(logz, logz_remain) - logz
+            delta_logz = np.logaddexp(float(logz), float(logz_remain)) - logz
             if dlogz is not None:
                 if delta_logz < dlogz:
                     if not self.save_samples:
@@ -780,7 +780,7 @@ class Sampler(object):
             # Set our new weight using quadratic estimates (trapezoid rule).
             logdvol = logsumexp(a=[logvol + self.dlv, logvol],
                                 b=[0.5, -0.5])  # ln(dvol)
-            logwt = np.logaddexp(loglstar_new, loglstar) + logdvol  # ln(wt)
+            logwt = np.logaddexp(float(loglstar_new), float(loglstar)) + logdvol  # ln(wt)
 
             # Sample a new live point from within the likelihood constraint
             # `logl > loglstar` using the bounding distribution and sampling
@@ -792,7 +792,7 @@ class Sampler(object):
             self.since_update += nc
 
             # Update evidence `logz` and information `h`.
-            logz_new = np.logaddexp(logz, logwt)
+            logz_new = np.logaddexp(float(logz), float(logwt))
             lzterm = (math.exp(loglstar - logz_new) * loglstar +
                       math.exp(loglstar_new - logz_new) * loglstar_new)
             h_new = (math.exp(logdvol) * lzterm +

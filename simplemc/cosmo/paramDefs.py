@@ -22,7 +22,7 @@ mnu_par = Parameter("mnu", 0.06, 0.1, (0, 1.0), "\Sigma m_{\\nu}")
 Nnu_par = Parameter("Nnu", 3.046, 0.5, (3.0, 3.1), "N_{\\rm eff}")
 
 # Curvature and DE equation of state.
-Ok_par = Parameter("Ok", 0.9999, 0.001, (0.99999, 1.00001), "\Omega_k")
+Ok_par = Parameter("Ok", 0.9999, 0.001, (0.0, 10.0), "\Omega_k")
 
 # Sigma 8 parameter (required by BaseCosmology)
 s8_par = Parameter("s8", 0.8, 0.01, (0.5, 1.0), "s8")
@@ -31,8 +31,8 @@ s8_par = Parameter("s8", 0.8, 0.01, (0.5, 1.0), "s8")
 Pr_par = Parameter("Pr", 28.6, 4, (5, 70), "c/(H_0r_d)")
 
 # DFT parameters
-dft_Oh_par = Parameter("Oh", 0.0, 0.000000001, (0.0,0.00001), "\Omega_{\mathfrak{h}}")
-dft_OL_par = Parameter("OL", 0.0, 0.00001, (-0.001,0.001), "\Omega_{\Lambda}")
-dft_Oe_par = Parameter("Oe", 0.0, 0.000001, (0.0,0.00001), "\Omega_{\varepsilon}")
+dft_Oh_par = Parameter("Oh", 0.000000001, 0.000000001, (0.0,10.0), "\Omega_{\mathfrak{h}}")
+dft_OL_par = Parameter("OL", 0.00001, 0.00001, (-10.0,10.0), "\Omega_{\Lambda}")
+dft_Oe_par = Parameter("Oe", 0.000001, 0.000001, (0.0,10.0), "\Omega_{\varepsilon}")
 dft_w_par  = Parameter("w_dft", 0.3, 0.3, (-0.33,1.0), "w")
 dft_l_par  = Parameter("l_dft", 0.0, 1.0, (-10.0,10.0), "\lambda")

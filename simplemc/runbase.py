@@ -5,6 +5,7 @@ import sys
 from .models import LCDMCosmology
 from .models import DFT1Cosmology
 from .models.DFT2Cosmology import DFT2Cosmology
+from .models.DFT2Cosmology_temp import DFT2Cosmology_temp
 
 #Generic model
 from .models.SimpleModel import SimpleModel, SimpleCosmoModel
@@ -58,6 +59,8 @@ def ParseModel(model, **kwargs):
         T = DFT1Cosmology()
     elif model == "DFT2":
         T = DFT2Cosmology()
+    elif model == "DFT2_temp":
+        T = DFT2Cosmology_temp()
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':
