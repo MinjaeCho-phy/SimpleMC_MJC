@@ -9,9 +9,11 @@ import scipy as sp
 class DR16BAOLikelihood(BaseLikelihood):
     def __init__(self, name, values_filename, fidtheory):
         """
-        This module calculates likelihood for the consensus BAODR12.
-        BAO-only consensus results, Alam et al. 2016
-        https://arxiv.org/abs/1607.03155
+        This module calculates likelihood for the consensus BAODR16
+        with some older BAOS. The new data in this compilation are
+        eBoss (z~1.48) and Ly-alpha (z ~ 2.33).
+        BAO-only consensus results, Alam et al. 2021
+        https://journals.aps.org/prd/abstract/10.1103/PhysRevD.103.083533
         Parameters
         ----------
         name
@@ -43,7 +45,6 @@ class DR16BAOLikelihood(BaseLikelihood):
         cov += 3**2
         self.icov  = la.inv(cov)
 
-
     def loglike(self):
         tvec = []
         for i, z in enumerate(self.zs):
@@ -54,16 +55,7 @@ class DR16BAOLikelihood(BaseLikelihood):
             elif self.type[i]==3:
                 tvec.append(self.theory_.DVOverrd(z))
         tvec = sp.array(tvec)
-        #print('hi', self.theory_.DaOverrd(self.zs[0])*self.rd, self.DM_DH[0])
-        #print('hi2', constants.c/1000./(self.theory_.HIOverrd(self.zs[1]))/self.rd, self.DM_DH[1])
-        #pass
-        #tvec = sp.array([100.0*self.theory_.h*sp.sqrt(self.theory_.RHSquared_a(1.0/(1+z))) for z in self.zs])
-        #print tvec, self.DM_DH
-
-        ## This is the factor that we need to correct
-        ## note that in principle this shouldn't matter too much, we will marginalise over this
         tvec += 0
         delta = tvec - self.DM_DH
         return -sp.dot(delta, sp.dot(self.icov, delta))/2.0
-
 

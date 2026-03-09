@@ -63,10 +63,17 @@ class AllDerived:
             for par in self.cpars:
                 if par.name == 'Om':
                     return 1 - par.value
-        if parname == 'Orc':
+            for par in self.cpars:
+                if par.name == 'OL':
+                    return par.value
+            return 0.0
+
+        elif parname == 'Orc':
             for par in self.cpars:
                 if par.name == 'Om':
                     return (1 - par.value)**2/4.
+            return 0.0
+
         elif parname == 'H0':
             for par in self.cpars:
                 if par.name == 'h':
@@ -81,7 +88,7 @@ class AllDerived:
             return self.like.theory_.Age()
         else:
             import sys
-            sys.exit('Define derived parameter', parname)
+            sys.exit('Define derived parameter {}'.format(parname))
 
 
 

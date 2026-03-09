@@ -515,7 +515,7 @@ class DriverMC:
             show_contours = kwargs.pop('show_contours', False)
             plot_param1 = kwargs.pop('plot_param1', None)
             plot_param2 = kwargs.pop('plot_param2', None)
-            compute_derived = kwargs.pop('compute_derived ', False)
+            compute_derived = kwargs.pop('compute_derived', False)
             if kwargs:
                 logger.critical('Unexpected **kwargs for MaxLike: {}'.format(kwargs))
                 logger.info('You can skip writing any option and SimpleMC will use the default value.\n'

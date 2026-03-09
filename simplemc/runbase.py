@@ -6,6 +6,8 @@ from .models import LCDMCosmology
 from .models import DFT1Cosmology
 from .models.DFT2Cosmology import DFT2Cosmology
 from .models.DFT2Cosmology_temp import DFT2Cosmology_temp
+from .models.wCDMCosmology import wCDMCosmology
+from .models.owa0CDMCosmology import owa0CDMCosmology
 
 #Generic model
 from .models.SimpleModel import SimpleModel, SimpleCosmoModel
@@ -19,21 +21,27 @@ from .likelihoods.LikelihoodMultiplier import LikelihoodMultiplier
 # Likelihood modules
 from .likelihoods.BAOLikelihoods import DR11LOWZ, DR11CMASS, DR14LyaAuto, DR14LyaCross, \
                                         SixdFGS, SDSSMGS, DR11LyaAuto, DR11LyaCross, eBOSS, \
-                                        DR12Consensus, DR16BAO, DESY6_plus_DR16BAO, DESI_DR1, \
-                                        DESY6_plus_DESI_DR1
-from .likelihoods.SimpleCMBLikelihood import PlanckLikelihood, PlanckLikelihood_15, PlanckLikelihood_18, WMAP9Likelihood
+                                        DR12Consensus, DR16BAO, DESIBAO
+from .likelihoods.SimpleCMBLikelihood import PLK, PLK15, PLK18, WMAP9
 from .likelihoods.CompressedSNLikelihood import BetouleSN, UnionSN
 from .likelihoods.SNLikelihood import JLASN_Full
 from .likelihoods.PantheonSNLikelihood import PantheonSN, BinnedPantheon
-from .likelihoods.PantheonSNFixedLikelihood import PantheonSNFixed
-from .likelihoods.CompressedHDLikelihood import HubbleDiagram
+from .likelihoods.PantheonPlusSNLikelihood import PantheonPlus
+from .likelihoods.FastPantheonLikelihood import FastPantheon
+from .likelihoods.UNION3Likelihood import UNION3
+from .likelihoods.DESY5Likelihood import DESY5
+from .likelihoods.CompressedHDLikelihood import HubbleDiagram, HD23
 from .likelihoods.Compressedfs8Likelihood import fs8Diagram
-from .likelihoods.HubbleParameterLikelihood import RiessH0, Minjae
+from .likelihoods.HubbleParameterLikelihood import RiessH0, RiessH0_21
+from .likelihoods.BBNLikelihood import BBN
+
 from .likelihoods.FineStructureConstantLikelihood import FSC
 
-from .likelihoods.SimpleLikelihood import GenericLikelihood
-from .likelihoods.SimpleLikelihood import StraightLine
+from .likelihoods.StrongLensingLikelihood import StrongLensing
+
+from .likelihoods.SimpleLikelihood import GenericLikelihood, StraightLine
 from .likelihoods.RotationCurvesLikelihood import RotationCurvesLike
+
 
 # String parser Aux routines
 model_list = "LCDM, DFT1"
@@ -55,6 +63,10 @@ def ParseModel(model, **kwargs):
 
     if model == "LCDM":
         T = LCDMCosmology()
+    elif model == "wCDM":
+        T = wCDMCosmology()
+    elif model == "owa0CDM":
+        T = owa0CDMCosmology()
     elif model == "DFT1":
         T = DFT1Cosmology()
     elif model == "DFT2":
@@ -73,11 +85,11 @@ def ParseModel(model, **kwargs):
 
 
 data_list = "BBAO, GBAO, GBAO_no6dF, CMASS, LBAO, LaBAO, LxBAO, MGS, Planck, WMAP, PlRd, WRd, PlDa, PlRdx10,"\
-    "CMBW, SN, SNx10, UnionSN, RiessH0, 6dFGS, Minjae, FSC"
+    "CMBW, SN, SNx10, UnionSN, RiessH0, 6dFGS, PantheonPlus, DR16BAO, HD23, DESIBAO, FSC, FastPantheon"
 
 
 def ParseDataset(datasets, **kwargs):
-    """ 
+    """ 
     Parameters
     -----------
     datasets:
@@ -149,12 +161,6 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihoods([
                 DR14LyaAuto(),
             ])
-        elif name == 'DR16BAO_lya':
-            L.addLikelihoods([
-                DR16BAO(),
-                DR14LyaAuto(),
-                DR14LyaCross()
-            ])
         elif name == 'LxBAO':
             L.addLikelihoods([
                 DR14LyaCross(),
@@ -165,53 +171,43 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihood(SixdFGS())
         elif name == 'eBOSS':
             L.addLikelihood(eBOSS())
-        #elif name == 'DR16BAO_lya':
-        #    L.addLikelihoods([
-        #        DR16BAO(),
-        #        DR14LyaAuto(),
-        #        DR14LyaCross()])
         elif name == 'DR16BAO':
             L.addLikelihood(DR16BAO())
-        elif name == 'DESY6_plus_DR16BAO':
-            L.addLikelihood(DESY6_plus_DR16BAO())
-        elif name == 'DESI_DR1':
-            L.addLikelihood(DESI_DR1())
-        elif name == 'DESI_DR1_lya':
-            L.addLikelihoods([
-                DESI_DR1(),
-                DR14LyaAuto(),
-                DR14LyaCross()
-            ])
-        elif name == 'DESY6_plus_DESI_DR1':
-            L.addLikelihood(DESY6_plus_DESI_DR1())
-        elif name == 'Planck':
+        elif name == 'DESI':
+            L.addLikelihood(DESIBAO())
+        elif name == 'PLK':
+            L.addLikelihood(PLK())
+        elif name == 'PLK15':
+            L.addLikelihood(PLK15())
+        elif name == 'PLK18':
+            L.addLikelihood(PLK18())
+        elif name == 'PLKW':
+            from .likelihoods.WangWangCMB import PlanckLikelihood
             L.addLikelihood(PlanckLikelihood())
-        elif name == 'Planck_15':
-            L.addLikelihood(PlanckLikelihood_15())
-        elif name == 'Planck_18':
-            L.addLikelihood(PlanckLikelihood_18())
-        elif name == 'WMAP':
-            L.addLikelihood(WMAP9Likelihood())
+        elif name == 'WMAP9':
+            L.addLikelihood(WMAP9())
         elif name == 'PlRd':
-            L.addLikelihood(PlanckLikelihood(kill_Da=True))
+            L.addLikelihood(PLK(kill_Da=True))
         elif name == 'WRd':
-            L.addLikelihood(WMAP9Likelihood(kill_Da=True))
+            L.addLikelihood(WMAP9(kill_Da=True))
         elif name == 'PlDa':
-            L.addLikelihood(PlanckLikelihood(kill_rd=True))
+            L.addLikelihood(PLK(kill_rd=True))
         elif name == 'PlRdx10':
             L.addLikelihood(LikelihoodMultiplier(
-                PlanckLikelihood(kill_Da=True), 100.0))
-        elif name == 'CMBW':
-            L.addLikelihood(WMAP9Likelihood())
+                PLK(kill_Da=True), 100.0))
         elif name == 'Pantheon':
             L.addLikelihood(PantheonSN())
-        elif name == 'Pantheon_fixed':
-            L.addLikelihood(PantheonSNFixed())
         elif name == 'BPantheon':
             L.addLikelihood(BinnedPantheon())
+        elif name == 'PantheonPlus':
+            L.addLikelihood(PantheonPlus())
         elif name == 'JLA':
             L.addLikelihood(JLASN_Full())
-        elif name == 'SN':  
+        elif name == 'Union3':
+            L.addLikelihood(UNION3())
+        elif name == 'DESY5':
+            L.addLikelihood(DESY5())
+        elif name == 'SN':
             L.addLikelihood(BetouleSN())
         elif name == 'SNx10':
             L.addLikelihood(LikelihoodMultiplier(BetouleSN(), 100.0))
@@ -219,12 +215,14 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihood(UnionSN())
         elif name == 'RiessH0':
             L.addLikelihood(RiessH0())
-        elif name == 'Minjae':
-            L.addLikelihood(Minjae())
-        elif name == 'FSC':
-            L.addLikelihood(FSC())
+        elif name == 'RiessH0_21':
+            L.addLikelihood(RiessH0_21())
         elif name == 'HD':
             L.addLikelihood(HubbleDiagram())
+        elif name == 'HD23':
+            L.addLikelihood(HD23())
+        elif name == 'BBN':
+            L.addLikelihood(BBN())
         elif name == 'fs8':
             L.addLikelihood(fs8Diagram())
         elif name == 'dline':
@@ -233,6 +231,12 @@ def ParseDataset(datasets, **kwargs):
         #    L.addLikelihood(PantheonLikelihood())
         elif name == 'RC':
             L.addLikelihood(RotationCurvesLike())
+        elif name == "SL":
+            L.addLikelihood(StrongLensing())
+        elif name == 'FSC':
+            L.addLikelihood(FSC())
+        elif name == 'FastPantheon':
+            L.addLikelihood(FastPantheon())
         elif name == 'generic':
             L.addLikelihood(GenericLikelihood(path_to_data=path_to_data,
                                               path_to_cov=path_to_cov,

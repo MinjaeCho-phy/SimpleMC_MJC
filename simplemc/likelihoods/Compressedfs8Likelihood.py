@@ -3,7 +3,7 @@
 from simplemc.likelihoods.BaseLikelihood import BaseLikelihood
 import scipy.linalg as la
 import scipy as sp
-from simplemc import cdir
+from simplemc.setup_logger import cdir
 
 
 class Compressedfs8Likelihood(BaseLikelihood):
@@ -39,14 +39,13 @@ class Compressedfs8Likelihood(BaseLikelihood):
 
     def loglike(self):
         tvec = sp.array([self.theory_.fs8(z) for z in self.zs])
-        #tvec += 0
         delta = tvec - self.fs8
         return -sp.dot(delta, sp.dot(self.icov, delta))/2.0
 
 
 
 class fs8Diagram(Compressedfs8Likelihood):
-    # data from arXiv:1806.10822   puede ser fs8Diagram o fs8_eleonora
+    # data from arXiv:1806.10822
     def __init__(self):
         Compressedfs8Likelihood.__init__(self,"fs8", cdir+"/data/fs8Diagram.txt",
                                          cdir+"/data/fs8Diagram-cov.txt")

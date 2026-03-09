@@ -5,6 +5,7 @@ from scipy.misc import derivative
 import scipy.integrate as intg
 from scipy import constants
 import scipy as sp
+import numpy as np
 
 
 
@@ -142,7 +143,10 @@ class BaseCosmology:
 
 
     def Hinv_z(self, z):
-        return 1./sp.sqrt(self.RHSquared_a(1.0/(1+z)))
+        # z can be a single number or an array
+        a = 1.0 / (1.0 + np.atleast_1d(z))
+        # RHSquared_a must be able to handle an array 'a'
+        return np.array([1.0/np.sqrt(self.RHSquared_a(val)) for val in a])
 
 
     # @autojit
@@ -152,22 +156,26 @@ class BaseCosmology:
 
     # @autojit
     def Da_z(self, z):
-        # r=intg.quad(self.Hinv_z,0,z)
-        # This version seems to be faster.
-        r = intg.quad(self.DistIntegrand_a, 1./(1+z), 1)
+        # Ensure z is a numpy array for vectorization
+        z = np.atleast_1d(z)
+        a_min = 1.0 / (1.0 + np.max(z))
+        a_grid = np.linspace(a_min, 1.0, 500)
 
-        r = r[0]  # assume precision is ok
+        integrand_vals = np.array([self.DistIntegrand_a(a) for a in a_grid])
+     
+        da = np.diff(a_grid)
+        avg_integrand = 0.5 * (integrand_vals[:-1] + integrand_vals[1:])
+        r_grid = np.concatenate([[0], np.cumsum(avg_integrand[::-1] * da[::-1])])[::-1]
+        a_requested = 1.0 / (1.0 + z)
+        r = np.interp(a_requested, a_grid, r_grid)
         if self.Curv == 0:
             return r
-        elif (self.Curv > 0):
-            q = sp.sqrt(self.Curv)
-            # someone check this eq
-            # Pure ADD has a 1+z fact, but have
-            # comoving one.
-            return sp.sinh(r*q)/(q)
+        elif self.Curv > 0:
+            q = np.sqrt(self.Curv)
+            return np.sinh(r * q) / q
         else:
-            q = sp.sqrt(-self.Curv)
-            return sp.sin(r*q)/(q)
+            q = np.sqrt(-self.Curv)
+            return np.sin(r * q) / q
 
     # Angular distance.
     def AD_z(self, z):

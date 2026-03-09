@@ -7,7 +7,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 def run_sequence():
-    config_files = ['baseConfig1.ini', 'baseConfig2.ini']
+    config_files = ['baseConfig2.ini', 'baseConfig1.ini']
     
     print(f"Starting sequential run for: {config_files}")
     

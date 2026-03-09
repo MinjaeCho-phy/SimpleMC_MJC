@@ -1,6 +1,6 @@
 from simplemc import logger
 from simplemc.cosmo.Parameter import Parameter
-from simplemc.cosmo.paramDefs import h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par
+from simplemc.cosmo.paramDefs import h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par, dft_l_par
 from simplemc.models.LCDMCosmology import LCDMCosmology
 
 #from scipy.integrate import solve_ivp
@@ -10,14 +10,14 @@ import warnings
 from numba import njit
 
 @njit(cache=True)
-def RHS_numba(z, y, h, Ok, Oh, OL, Oe, w):
+def RHS_numba(z, y, h, Ok, Oh, OL, Oe, w, l):
     phi = y[0]
     H = y[1]
     
     if H <= 0.0:
         H = h * 100.0
 
-    OeEvol1 = 3.0 * (w + 1.0)
+    OeEvol1 = 6.0 * (w + 1.0) / (l + 2.0)
     # Clamp phi to prevent overflow in exp()
     if phi > 50.0:
         phi_clamped = 50.0
@@ -26,7 +26,7 @@ def RHS_numba(z, y, h, Ok, Oh, OL, Oe, w):
     else:
         phi_clamped = phi
         
-    OeEvol2 = np.exp(2.0 * phi_clamped) 
+    OeEvol2 = np.exp(4.0 * phi_clamped / (l + 2.0)) 
     
     H_sq = H**2.0
     inSqrt = 3.0 / (h * 100.0)**2.0 + (
@@ -53,7 +53,7 @@ def RHS_numba(z, y, h, Ok, Oh, OL, Oe, w):
     return np.array([dphidz, dHdz])
 
 @njit(cache=True)
-def solve_ode_numba(y0, z_start, z_end, steps, h, Ok, Oh, OL, Oe, w):
+def solve_ode_numba(y0, z_start, z_end, steps, h, Ok, Oh, OL, Oe, w, l):
     z_vals = np.linspace(z_start, z_end, steps)
     dz = z_vals[1] - z_vals[0]
     
@@ -65,10 +65,10 @@ def solve_ode_numba(y0, z_start, z_end, steps, h, Ok, Oh, OL, Oe, w):
     for i in range(steps - 1):
         z = z_vals[i]
         
-        k1 = RHS_numba(z, y, h, Ok, Oh, OL, Oe, w)
-        k2 = RHS_numba(z + 0.5*dz, y + 0.5*dz*k1, h, Ok, Oh, OL, Oe, w)
-        k3 = RHS_numba(z + 0.5*dz, y + 0.5*dz*k2, h, Ok, Oh, OL, Oe, w)
-        k4 = RHS_numba(z + dz, y + dz*k3, h, Ok, Oh, OL, Oe, w)
+        k1 = RHS_numba(z, y, h, Ok, Oh, OL, Oe, w, l)
+        k2 = RHS_numba(z + 0.5*dz, y + 0.5*dz*k1, h, Ok, Oh, OL, Oe, w, l)
+        k3 = RHS_numba(z + 0.5*dz, y + 0.5*dz*k2, h, Ok, Oh, OL, Oe, w, l)
+        k4 = RHS_numba(z + dz, y + dz*k3, h, Ok, Oh, OL, Oe, w, l)
         
         y = y + (dz/6.0) * (k1 + 2*k2 + 2*k3 + k4)
         y_vals[i+1] = y
@@ -76,7 +76,7 @@ def solve_ode_numba(y0, z_start, z_end, steps, h, Ok, Oh, OL, Oe, w):
     return z_vals, y_vals
 
 class DFT1Cosmology(LCDMCosmology):
-    def __init__(self, h = h_par.value, Ok = Ok_par.value, Oh = dft_Oh_par.value, OL = dft_OL_par.value, Oe = dft_Oe_par.value, w = dft_w_par.value):
+    def __init__(self, h = h_par.value, Ok = Ok_par.value, Oh = dft_Oh_par.value, OL = dft_OL_par.value, Oe = dft_Oe_par.value, w = dft_w_par.value, l = dft_l_par.value):
         """
         Parameter info
 
@@ -86,8 +86,8 @@ class DFT1Cosmology(LCDMCosmology):
         OL : Density Parameter for Cosmological Constant, \Omega_{\Lambda}
         Oe : Density Parameter for general matter with EoS parameters (w,l), \Omega_{\epsilon}
         w  : First Equation of State Parameter,  w = (pressure)/("energy" density)
+        l  : Second Equation of State Parameter
         """
-        """ This is the one mimicking 2308.07149 """
         """ Parameter setting """
         self.h  = h
         self.Ok = Ok
@@ -95,8 +95,9 @@ class DFT1Cosmology(LCDMCosmology):
         self.Oe = Oe
         self.OL = OL
         self.w  = w
+        self.l  = l
 
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par, dft_l_par]
         
         # Increased steps for RK4 accuracy to match adaptive solver better if needed
         # 500 might be enough, but let's be safe with 1000 or keep 500 and verify
@@ -127,12 +128,14 @@ class DFT1Cosmology(LCDMCosmology):
                 self.Oe = p.value
             elif p.name == "w_dft":
                 self.w = p.value
+            elif p.name == "l_dft":
+                self.l = p.value
         self.initialize()
         return True
 
     def RHS(self, z, y):
         # Wrapper for backward compatibility if ever needed, though efficiency dictates using numba directly
-        return RHS_numba(z, y, self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w)
+        return RHS_numba(z, y, self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w, self.l)
 
     def initialize(self):
         y0 = np.array([0.0, self.h * 100.0])
@@ -144,7 +147,7 @@ class DFT1Cosmology(LCDMCosmology):
             0.0, 
             8.0, 
             self.rk_steps,
-            self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w
+            self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w, self.l
         )
         
         

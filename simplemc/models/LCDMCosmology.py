@@ -4,6 +4,7 @@ from simplemc.cosmo import cosmoApprox as CA
 from simplemc.cosmo.BaseCosmology import BaseCosmology
 from simplemc.cosmo.RadiationAndNeutrinos import RadiationAndNeutrinos
 from simplemc.cosmo.paramDefs import Obh2_par, Om_par, h_par, mnu_par, Nnu_par
+from simplemc.cosmo.paramDefs import alpha_fsc_par
 
 
 
@@ -37,12 +38,14 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
     rd_approx = "Cuesta"
 
     def __init__(self, Obh2=Obh2_par.value, Om=Om_par.value, h=h_par.value, mnu=mnu_par.value,
-                 Nnu=Nnu_par.value, degenerate_nu=False, disable_radiation=False, fixOm=False):
+                 Nnu=Nnu_par.value, alpha_fsc=alpha_fsc_par.value, degenerate_nu=False, disable_radiation=False, fixOm=False, fixfsc=True):
 
         # two parameters: Om and h
         self.Om    = Om
         self.Obh2  = Obh2
         self.fixOm = fixOm
+        self.fixfsc = fixfsc
+        self.alpha_fsc = alpha_fsc
 
         BaseCosmology.__init__(self, h)
         RadiationAndNeutrinos.__init__(
@@ -79,12 +82,15 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
     # to change parameters/priors see ParamDefs.py
     def freeParameters(self):
         Om_par.setValue(self.Om)
+        alpha_fsc_par.setValue(self.alpha_fsc)
         l = []
         if not self.fixOm:
             l.append(Om_par)
         if (not self.varyPrefactor):
             Obh2_par.setValue(self.Obh2)
             l += [Obh2_par]
+        if not self.fixfsc:
+            l.append(alpha_fsc_par)
 
         l += BaseCosmology.freeParameters(self)
         l += RadiationAndNeutrinos.freeParameters(self)
@@ -100,6 +106,8 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
                 self.Om = p.value
             elif p.name == "Obh2":
                 self.Obh2 = p.value
+            elif p.name == "alpha_fsc":
+                self.alpha_fsc = p.value
 
         self.Ocb = self.Om-self.Omnu-self.Omrad
         if (not self.varyPrefactor):
@@ -121,8 +129,9 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
         NuContrib = self.NuDensity.rho(a)/self.h**2
         return (self.Ocb/a**3+self.Omrad/a**4+NuContrib+(1.0-self.Om))
 
-
-
+    def fine_structure_constant(self, a):
+        return (self.alpha_fsc/0.0072973525643) - 1.0
+    
     # Obh2 prior
     def prior_loglike(self):
         if (self.varyPrefactor or self.noObh2prior):
