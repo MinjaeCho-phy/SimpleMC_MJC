@@ -3,4 +3,5 @@ __pycache__/
 doc/
 *.pyc
 alter/
+nsns/
 *.pkl

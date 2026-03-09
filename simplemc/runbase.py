@@ -5,7 +5,7 @@ import sys
 from .models import LCDMCosmology
 from .models import DFT1Cosmology
 from .models.DFT2Cosmology import DFT2Cosmology
-from .models.DFT2Cosmology_temp import DFT2Cosmology_temp
+from .models.DFTVacuum import DFTVacuum
 from .models.wCDMCosmology import wCDMCosmology
 from .models.owa0CDMCosmology import owa0CDMCosmology
 
@@ -71,8 +71,8 @@ def ParseModel(model, **kwargs):
         T = DFT1Cosmology()
     elif model == "DFT2":
         T = DFT2Cosmology()
-    elif model == "DFT2_temp":
-        T = DFT2Cosmology_temp()
+    elif model == "DFTvac":
+        T = DFTVacuum
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':
