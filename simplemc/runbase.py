@@ -3,7 +3,7 @@ import sys
 
 # Cosmologies already included
 from .models import LCDMCosmology
-from .models import DFT1Cosmology
+from .models import DFT1Cosmology, DFT1w1l2Cosmology
 from .models.DFT2Cosmology import DFT2Cosmology
 from .models.DFTVacuum import DFTVacuum
 from .models.wCDMCosmology import wCDMCosmology
@@ -69,10 +69,14 @@ def ParseModel(model, **kwargs):
         T = owa0CDMCosmology()
     elif model == "DFT1":
         T = DFT1Cosmology()
+    elif model == "DFT1_w1l2":
+        T = DFT1w1l2Cosmology()
     elif model == "DFT2":
         T = DFT2Cosmology()
     elif model == "DFTvac":
         T = DFTVacuum()
+    elif model == "DFTvac_noh":
+        T = DFTVacuum(ishzero=True)
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':

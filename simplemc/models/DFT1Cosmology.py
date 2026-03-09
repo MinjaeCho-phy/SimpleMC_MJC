@@ -201,3 +201,30 @@ class DFT1Cosmology(LCDMCosmology):
         if not np.isfinite(result) or result <= 0:
             return 1e-30
         return result
+
+
+class DFT1w1l2Cosmology(DFT1Cosmology):
+    """
+    DFT1 cosmology with fixed w=1, l=2.
+    Only h, Ok, Oh, OL, Oe are free parameters.
+    """
+    def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value):
+        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=1.0, l=2.0)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par]
+
+    def updateParams(self, pars):
+        ok = LCDMCosmology.updateParams(self, pars)
+        if not ok:
+            return False
+        for p in pars:
+            if p.name == "Ok":
+                self.Ok = p.value
+            elif p.name == "Oh":
+                self.Oh = p.value
+            elif p.name == "OL":
+                self.OL = p.value
+            elif p.name == "Oe":
+                self.Oe = p.value
+        self.initialize()
+        return True
