@@ -72,7 +72,7 @@ def ParseModel(model, **kwargs):
     elif model == "DFT2":
         T = DFT2Cosmology()
     elif model == "DFTvac":
-        T = DFTVacuum
+        T = DFTVacuum()
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':
