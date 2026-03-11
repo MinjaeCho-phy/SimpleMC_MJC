@@ -228,3 +228,124 @@ class DFT1w1l2Cosmology(DFT1Cosmology):
                 self.Oe = p.value
         self.initialize()
         return True
+
+
+class DFT1l3w1Cosmology(DFT1Cosmology):
+    """
+    DFT1 cosmology with constraint l = 3w - 1.
+    Free parameters: h, Ok, Oh, OL, Oe, w. l is derived from w.
+    """
+    def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value):
+        l_init = 3.0 * w - 1.0
+        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w, l=l_init)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
+
+    def updateParams(self, pars):
+        ok = LCDMCosmology.updateParams(self, pars)
+        if not ok:
+            return False
+        for p in pars:
+            if p.name == "Ok":
+                self.Ok = p.value
+            elif p.name == "Oh":
+                self.Oh = p.value
+            elif p.name == "OL":
+                self.OL = p.value
+            elif p.name == "Oe":
+                self.Oe = p.value
+            elif p.name == "w_dft":
+                self.w = p.value
+        self.l = 3.0 * self.w - 1.0
+        self.initialize()
+        return True
+
+
+class DFT1l2wCosmology(DFT1Cosmology):
+    """
+    DFT1 cosmology with constraint l = 2w.
+    Free parameters: h, Ok, Oh, OL, Oe, w. l is derived from w.
+    """
+    def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value):
+        l_init = 2.0 * w
+        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w, l=l_init)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
+
+    def updateParams(self, pars):
+        ok = LCDMCosmology.updateParams(self, pars)
+        if not ok:
+            return False
+        for p in pars:
+            if p.name == "Ok":
+                self.Ok = p.value
+            elif p.name == "Oh":
+                self.Oh = p.value
+            elif p.name == "OL":
+                self.OL = p.value
+            elif p.name == "Oe":
+                self.Oe = p.value
+            elif p.name == "w_dft":
+                self.w = p.value
+        self.l = 2.0 * self.w
+        self.initialize()
+        return True
+
+
+class DFT1l0Cosmology(DFT1Cosmology):
+    """
+    DFT1 cosmology with fixed l=0. OL is a free parameter.
+    Free parameters: h, Ok, Oh, OL, Oe, w.
+    """
+    def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value):
+        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w, l=0.0)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
+
+    def updateParams(self, pars):
+        ok = LCDMCosmology.updateParams(self, pars)
+        if not ok:
+            return False
+        for p in pars:
+            if p.name == "Ok":
+                self.Ok = p.value
+            elif p.name == "Oh":
+                self.Oh = p.value
+            elif p.name == "OL":
+                self.OL = p.value
+            elif p.name == "Oe":
+                self.Oe = p.value
+            elif p.name == "w_dft":
+                self.w = p.value
+        self.l = 0.0
+        self.initialize()
+        return True
+
+
+class DFT1l0noLCosmology(DFT1Cosmology):
+    """
+    DFT1 cosmology with fixed l=0 and OL=0 (no cosmological constant).
+    Free parameters: h, Ok, Oh, Oe, w.
+    """
+    def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
+                 Oe=dft_Oe_par.value, w=dft_w_par.value):
+        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=0.0, Oe=Oe, w=w, l=0.0)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+
+    def updateParams(self, pars):
+        ok = LCDMCosmology.updateParams(self, pars)
+        if not ok:
+            return False
+        for p in pars:
+            if p.name == "Ok":
+                self.Ok = p.value
+            elif p.name == "Oh":
+                self.Oh = p.value
+            elif p.name == "Oe":
+                self.Oe = p.value
+            elif p.name == "w_dft":
+                self.w = p.value
+        self.OL = 0.0
+        self.l  = 0.0
+        self.initialize()
+        return True
