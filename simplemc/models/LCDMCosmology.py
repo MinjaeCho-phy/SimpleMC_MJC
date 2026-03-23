@@ -5,7 +5,7 @@ from simplemc.cosmo.BaseCosmology import BaseCosmology
 from simplemc.cosmo.RadiationAndNeutrinos import RadiationAndNeutrinos
 from simplemc.cosmo.paramDefs import Obh2_par, Om_par, h_par, mnu_par, Nnu_par
 from simplemc.cosmo.paramDefs import alpha_fsc_par
-
+from simplemc.cosmo.paramDefs import MB_par
 
 
 class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
@@ -37,8 +37,8 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
     # possible options: "Anderson", "Cuesta", "CuestaNeff", "EH"
     rd_approx = "Cuesta"
 
-    def __init__(self, Obh2=Obh2_par.value, Om=Om_par.value, h=h_par.value, mnu=mnu_par.value,
-                 Nnu=Nnu_par.value, alpha_fsc=alpha_fsc_par.value, degenerate_nu=False, disable_radiation=False, fixOm=False, fixfsc=True):
+    def __init__(self, Obh2=Obh2_par.value, Om=Om_par.value, h=h_par.value, mnu=mnu_par.value, alpha_fsc=alpha_fsc_par.value, MB=MB_par.value,
+                 Nnu=Nnu_par.value, degenerate_nu=False, disable_radiation=False, fixOm=False, fixfsc=True, fixMB=False):
 
         # two parameters: Om and h
         self.Om    = Om
@@ -46,6 +46,8 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
         self.fixOm = fixOm
         self.fixfsc = fixfsc
         self.alpha_fsc = alpha_fsc
+        self.fixMB = fixMB
+        self.MB = MB
 
         BaseCosmology.__init__(self, h)
         RadiationAndNeutrinos.__init__(
@@ -83,6 +85,7 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
     def freeParameters(self):
         Om_par.setValue(self.Om)
         alpha_fsc_par.setValue(self.alpha_fsc)
+        MB_par.setValue(self.MB)
         l = []
         if not self.fixOm:
             l.append(Om_par)
@@ -91,6 +94,8 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
             l += [Obh2_par]
         if not self.fixfsc:
             l.append(alpha_fsc_par)
+        if not self.fixMB:
+            l.append(MB_par)
 
         l += BaseCosmology.freeParameters(self)
         l += RadiationAndNeutrinos.freeParameters(self)
@@ -104,10 +109,12 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
         for p in pars:
             if p.name == "Om":
                 self.Om = p.value
-            elif p.name == "Obh2":
-                self.Obh2 = p.value
             elif p.name == "alpha_fsc":
                 self.alpha_fsc = p.value
+            elif p.name == "MB":
+                self.MB = p.value
+            elif p.name == "Obh2":
+                self.Obh2 = p.value
 
         self.Ocb = self.Om-self.Omnu-self.Omrad
         if (not self.varyPrefactor):
@@ -117,8 +124,10 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
             # used
             if (Nnu == 0):
                 Nnu = 3.04
+            #luis mod.
             self.setrd(self.rd_func_(
                 self.Obh2, self.Ocb*self.h**2, self.Omnuh2, Nnu))
+            #luis mod. (comentaste estas 2 lineas)
         return True
 
 
@@ -128,10 +137,10 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
     def RHSquared_a(self, a):
         NuContrib = self.NuDensity.rho(a)/self.h**2
         return (self.Ocb/a**3+self.Omrad/a**4+NuContrib+(1.0-self.Om))
+        #return (self.Ocb/a**3+(1.0-self.Om))
 
-    def fine_structure_constant(self, a):
-        return (self.alpha_fsc/0.0072973525643) - 1.0
-    
+
+
     # Obh2 prior
     def prior_loglike(self):
         if (self.varyPrefactor or self.noObh2prior):
@@ -140,7 +149,10 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
         else:
             #'Cooke et al, http://arxiv.org/abs/1308.3240,
             # 2.202 +/- 0.046'
-            return -(self.Obh2-0.02202)**2/(2*0.00046**2)
+            #luis mod.
+            return -(self.Obh2-0.02202)**2/(2*0.00046**2)  #original
+            #return -(self.Obh2-0.02218)**2/(2*0.00055**2)   #el de DESI DR2
+            #luis mod.
         #return 0
 
 
@@ -161,4 +173,15 @@ class LCDMCosmology(BaseCosmology, RadiationAndNeutrinos):
         Ocbh2  = self.Ocb*self.h**2
         zstar  = 1090
         Dastar = self.Da_z(zstar)*self.c_/(self.h*100)
+        #luis mod. la de 2 elementos es para Plancknoom
         return sp.array([self.Obh2, Ocbh2, Dastar/self.rd])
+        #return sp.array([self.Obh2, Dastar/self.rd])
+        #luis mod.
+
+    #luis mod.
+    def fine_structure_constant(self,a): 
+        return(self.alpha_fsc/0.0072973525643 - 1.0)
+  
+    def MB_pp(self,a):
+        return(self.MB-0.0*a)
+    #luis mod.

@@ -29,6 +29,7 @@ from .likelihoods.CompressedSNLikelihood import BetouleSN, UnionSN
 from .likelihoods.SNLikelihood import JLASN_Full
 from .likelihoods.PantheonSNLikelihood import PantheonSN, BinnedPantheon
 from .likelihoods.PantheonPlusSNLikelihood import PantheonPlus
+from .likelihoods.PantheonPlusSH0ESLikelihood import PantheonPlusSH0ES
 from .likelihoods.FastPantheonLikelihood import FastPantheon
 from .likelihoods.UNION3Likelihood import UNION3
 from .likelihoods.DESY5Likelihood import DESY5
@@ -271,6 +272,8 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihood(FSC())
         elif name == 'FastPantheon':
             L.addLikelihood(FastPantheon())
+        elif name == 'PantheonPlusSH0ES':
+            L.addLikelihood(PantheonPlusSH0ES())
         elif name == 'generic':
             L.addLikelihood(GenericLikelihood(path_to_data=path_to_data,
                                               path_to_cov=path_to_cov,
