@@ -64,15 +64,17 @@ def solve_ode_numba(y0, z_start, z_end, steps, h, Ok, Oh):
     return z_vals, y_vals
 
 class DFTVacuum(LCDMCosmology):
-    def __init__(self, h = h_par.value, Ok = Ok_par.value, Oh = dft_Oh_par.value):
+    def __init__(self, h = h_par.value, Ok = Ok_par.value, Oh = dft_Oh_par.value, ishzero = False):
         """
         DFT2Cosmology: Optimized version with precomputed distance integrals.
+        ishzero: if True, fix Omega_h = 0 and remove it from free parameters.
         """
         self.h  = h
         self.Ok = Ok
-        self.Oh = Oh
+        self.ishzero = ishzero
+        self.Oh = 0.0 if ishzero else Oh
 
-        self.parameters = [h_par, Ok_par, dft_Oh_par]
+        self.parameters = [h_par, Ok_par] if ishzero else [h_par, Ok_par, dft_Oh_par]
         
         # High resolution for initial ODE solve
         self.rk_steps = 1000 
@@ -97,7 +99,7 @@ class DFTVacuum(LCDMCosmology):
         for p in pars:
             if p.name == "Ok":
                 self.Ok = p.value
-            elif p.name == "Oh":
+            elif p.name == "Oh" and not self.ishzero:
                 self.Oh = p.value
         self.initialize()
         return True

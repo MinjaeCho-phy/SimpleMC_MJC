@@ -7,10 +7,11 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 def run_sequence():
-    config_files = ['baseConfig2.ini', 'baseConfig1.ini']
-    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_files = [os.path.join(script_dir, f) for f in ['baseConfig.ini', 'baseConfig1.ini']]
+
     print(f"Starting sequential run for: {config_files}")
-    
+
     for config_file in config_files:
         if not os.path.exists(config_file):
             print(f"Error: Configuration file '{config_file}' not found.")

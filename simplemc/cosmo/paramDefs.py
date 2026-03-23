@@ -42,6 +42,6 @@ alpha_fsc_par = Parameter("alpha_fsc", 0.0072973525643, 0.0001, (0.005, 0.01), "
 # DFT parameters
 dft_Oh_par = Parameter("Oh", 0.1, 0.1, (0.0,10.0), "\Omega_{\mathfrak{h}}")
 dft_OL_par = Parameter("OL", 0.1, 0.1, (-10.0,10.0), "\Omega_{\Lambda}")
-dft_Oe_par = Parameter("Oe", 0.1, 0.1, (0.0,1.0), "\Omega_{\varepsilon}")
+dft_Oe_par = Parameter("Oe", 0.1, 0.1, (0.0,10.0), "\Omega_{\varepsilon}")
 dft_w_par  = Parameter("w_dft", 0.3, 0.3, (-10.0,10.0), "w")
 dft_l_par  = Parameter("l_dft", 0.0, 1.0, (-10.0,10.0), "\lambda")
