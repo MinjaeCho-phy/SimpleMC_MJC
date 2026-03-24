@@ -33,6 +33,7 @@ from .likelihoods.PantheonPlusSH0ESLikelihood import PantheonPlusSH0ES
 from .likelihoods.FastPantheonLikelihood import FastPantheon
 from .likelihoods.UNION3Likelihood import UNION3
 from .likelihoods.DESY5Likelihood import DESY5
+from .likelihoods.DESDovekieLikelihood import DESDovekie
 from .likelihoods.CompressedHDLikelihood import HubbleDiagram, HD23
 from .likelihoods.Compressedfs8Likelihood import fs8Diagram
 from .likelihoods.HubbleParameterLikelihood import RiessH0, RiessH0_21
@@ -241,7 +242,7 @@ def ParseDataset(datasets, **kwargs):
         elif name == 'Union3':
             L.addLikelihood(UNION3())
         elif name == 'DESY5':
-            L.addLikelihood(DESY5())
+            L.addLikelihood(DESY5 ())
         elif name == 'SN':
             L.addLikelihood(BetouleSN())
         elif name == 'SNx10':
@@ -274,6 +275,8 @@ def ParseDataset(datasets, **kwargs):
             L.addLikelihood(FastPantheon())
         elif name == 'PantheonPlusSH0ES':
             L.addLikelihood(PantheonPlusSH0ES())
+        elif name == 'DESDovekie':
+            L.addLikelihood(DESDovekie())
         elif name == 'generic':
             L.addLikelihood(GenericLikelihood(path_to_data=path_to_data,
                                               path_to_cov=path_to_cov,
