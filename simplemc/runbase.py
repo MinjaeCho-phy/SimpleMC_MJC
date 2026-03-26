@@ -3,7 +3,6 @@ import sys
 
 # Cosmologies already included
 from .models import LCDMCosmology
-from .models import DFT1Cosmology, DFT1w1l2Cosmology, DFT1l3w1Cosmology, DFT1l2wCosmology, DFT1l0Cosmology, DFT1l0noLCosmology
 from .models.LDFTCosmology import LDFTCosmology, LDFTw1l2Cosmology, LDFTl3w1Cosmology, LDFTl2wCosmology, LDFTl0Cosmology
 from .models.DFTCosmology import DFTCosmology, DFTw1l2Cosmology, DFTl3w1Cosmology, DFTl2wCosmology, DFTl0Cosmology
 from .models.DFT2Cosmology import DFT2Cosmology
@@ -71,18 +70,6 @@ def ParseModel(model, **kwargs):
         T = wCDMCosmology()
     elif model == "owa0CDM":
         T = owa0CDMCosmology()
-    elif model == "DFT1":
-        T = DFT1Cosmology()
-    elif model == "DFT1_w1l2":
-        T = DFT1w1l2Cosmology()
-    elif model == "DFT1_l3w1":
-        T = DFT1l3w1Cosmology()
-    elif model == "DFT1_l2w":
-        T = DFT1l2wCosmology()
-    elif model == "DFT1_l0":
-        T = DFT1l0Cosmology()
-    elif model == "DFT1_l0noL":
-        T = DFT1l0noLCosmology()
     elif model == "LDFT":
         T = LDFTCosmology()
     elif model == "LDFT_w1l2":

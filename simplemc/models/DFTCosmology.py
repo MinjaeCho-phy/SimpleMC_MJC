@@ -1,22 +1,108 @@
-from simplemc.cosmo.paramDefs import h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par, dft_l_par
-from simplemc.models.LCDMCosmology import LCDMCosmology
-from simplemc.models.DFT1Cosmology import DFT1Cosmology
+from simplemc.cosmo.BaseCosmology import BaseCosmology
+from simplemc.cosmo.paramDefs import h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par, dft_l_par
+
+from scipy.interpolate import interp1d
+import numpy as np
+from numba import njit
 
 
-class DFTCosmology(DFT1Cosmology):
+@njit(cache=True)
+def _dft_rhs(z, y, h, Ok, Oh, OL, Oe, w, l):
+    phi = y[0]
+    H   = y[1]
+
+    if H <= 0.0:
+        H = h * 100.0
+
+    OeEvol1 = 6.0 * (w + 1.0) / (l + 2.0)
+
+    if phi > 50.0:
+        phi_c = 50.0
+    elif phi < -50.0:
+        phi_c = -50.0
+    else:
+        phi_c = phi
+
+    OeEvol2 = np.exp(4.0 * phi_c / (l + 2.0))
+
+    inSqrt = 3.0 / (h * 100.0)**2.0 + (
+        6.0 * Oe * (1.0 + z)**OeEvol1 * OeEvol2
+        + 6.0 * OL
+        + 6.0 * Ok * (1.0 + z)**2.0
+        + 6.0 * Oh * (1.0 + z)**6.0
+    ) / H**2.0
+
+    if not inSqrt < 0.0:
+        s = inSqrt**0.5
+        dphidz = -1.0 * (3.0 - h * 100.0 * s) / (2.0 * (1.0 + z))
+        dHdz   = -(h * 100.0)**2.0 * (
+            (3.0 * w * Oe * (1.0 + z)**OeEvol1 * OeEvol2
+             + 2.0 * Ok * (1.0 + z)**2.0
+             + 6.0 * Oh * (1.0 + z)**6.0) / H
+            - H / (h * 100.0) * s
+        ) / (1.0 + z)
+    else:
+        dphidz = -1.0
+        dHdz   = -1.0
+
+    return np.array([dphidz, dHdz])
+
+
+@njit(cache=True)
+def _dft_solve(y0, z_start, z_end, steps, h, Ok, Oh, OL, Oe, w, l):
+    z_vals = np.linspace(z_start, z_end, steps)
+    dz     = z_vals[1] - z_vals[0]
+    y_vals = np.zeros((steps, 2))
+    y_vals[0] = y0
+    y = y0.copy()
+    for i in range(steps - 1):
+        z  = z_vals[i]
+        k1 = _dft_rhs(z,            y,            h, Ok, Oh, OL, Oe, w, l)
+        k2 = _dft_rhs(z + 0.5*dz,   y + 0.5*dz*k1, h, Ok, Oh, OL, Oe, w, l)
+        k3 = _dft_rhs(z + 0.5*dz,   y + 0.5*dz*k2, h, Ok, Oh, OL, Oe, w, l)
+        k4 = _dft_rhs(z + dz,        y +     dz*k3, h, Ok, Oh, OL, Oe, w, l)
+        y  = y + (dz / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
+        y_vals[i + 1] = y
+    return z_vals, y_vals
+
+
+class DFTCosmology(BaseCosmology):
     """
-    DFT cosmology with OL=0 (no cosmological constant).
-    Free parameters: h, Ok, Oh, Oe, w, l.
+    DFT cosmology (OL=0 by default). Solves the DFT Friedmann equations
+    via RK4 and interpolates H(z) and phi(z).
+
+    Parameters
+    ----------
+    h  : Hubble constant / 100
+    Ok : curvature density, Omega_k
+    Oh : h-flux density, Omega_h
+    OL : cosmological constant density, Omega_Lambda  (fixed to 0 here)
+    Oe : epsilon-matter density, Omega_epsilon
+    w  : first EoS parameter
+    l  : second EoS parameter  (singular at l = -2)
     """
+
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value, l=dft_l_par.value):
-        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=0.0, Oe=Oe, w=w, l=l)
+        self.Ok = Ok
+        self.Oh = Oh
+        self.OL = 0.0
+        self.Oe = Oe
+        self.w  = w
+        self.l  = l
+
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par, dft_l_par]
+        self.rk_steps  = 5000
+        self.z_values  = np.linspace(0.0, 8.0, 500)
+
+        BaseCosmology.__init__(self, h)
+        self.updateParams([])
+
+    def freeParameters(self):
+        return self.parameters
 
     def updateParams(self, pars):
-        ok = LCDMCosmology.updateParams(self, pars)
-        if not ok:
-            return False
+        BaseCosmology.updateParams(self, pars)
         for p in pars:
             if p.name == "Ok":
                 self.Ok = p.value
@@ -32,115 +118,110 @@ class DFTCosmology(DFT1Cosmology):
         self.initialize()
         return True
 
+    def initialize(self):
+        y0 = np.array([0.0, self.h * 100.0])
+        z_out, y_out = _dft_solve(
+            y0, 0.0, 8.0, self.rk_steps,
+            self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w, self.l
+        )
+        phi_fine = interp1d(z_out, y_out[:, 0], kind='cubic', fill_value='extrapolate')
+        H_fine   = interp1d(z_out, y_out[:, 1], kind='cubic', fill_value='extrapolate')
+        phi_c = phi_fine(self.z_values)
+        H_c   = H_fine(self.z_values)
+        self.phiinterp = interp1d(self.z_values, phi_c, fill_value='extrapolate')
+        self.Hinterp   = interp1d(self.z_values, H_c,   fill_value='extrapolate')
+        return True
 
-class DFTw1l2Cosmology(DFT1Cosmology):
-    """
-    DFT cosmology with fixed w=1, l=2 and OL=0.
-    Free parameters: h, Ok, Oh, Oe.
-    """
+    def hub(self, z):
+        return self.Hinterp(z)
+
+    def fine_structure_constant(self, a):
+        phi = np.clip(self.phiinterp(1.0/a - 1.0), -50, 50)
+        return np.exp(2.0 * phi) - 1.0
+
+    def prior_loglike(self):
+        # Soft barrier around the l = -2 singularity (both sides allowed).
+        abs_l2 = abs(self.l + 2.0)
+        if abs_l2 < 1e-10:
+            return -1e30
+        sigma = 0.03
+        if abs_l2 < 3.0 * sigma:
+            return -0.5 * (sigma / abs_l2) ** 2
+        return 0.0
+
+    def RHSquared_a(self, a):
+        H0 = self.h * 100.0
+        H  = self.hub(1.0/a - 1.0)
+        result = (H / H0)**2
+        if not np.isfinite(result) or result <= 0:
+            return 1e-30
+        return result
+
+
+class DFTw1l2Cosmology(DFTCosmology):
+    """DFT with fixed w=1, l=2, OL=0. Free: h, Ok, Oh, Oe."""
+
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value):
-        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=0.0, Oe=Oe, w=1.0, l=2.0)
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=1.0, l=2.0)
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par]
 
     def updateParams(self, pars):
-        ok = LCDMCosmology.updateParams(self, pars)
+        ok = DFTCosmology.updateParams(self, pars)
         if not ok:
             return False
-        for p in pars:
-            if p.name == "Ok":
-                self.Ok = p.value
-            elif p.name == "Oh":
-                self.Oh = p.value
-            elif p.name == "Oe":
-                self.Oe = p.value
-        self.OL = 0.0
+        self.w = 1.0
+        self.l = 2.0
         self.initialize()
         return True
 
 
-class DFTl3w1Cosmology(DFT1Cosmology):
-    """
-    DFT cosmology with constraint l = 3w + 1 and OL=0.
-    Free parameters: h, Ok, Oh, Oe, w. l is derived from w.
-    """
+class DFTl3w1Cosmology(DFTCosmology):
+    """DFT with constraint l = 3w - 1, OL=0. Free: h, Ok, Oh, Oe, w."""
+
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value):
-        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=0.0, Oe=Oe, w=w, l=3.0*w+1.0)
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=3.0*w - 1.0)
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
 
     def updateParams(self, pars):
-        ok = LCDMCosmology.updateParams(self, pars)
+        ok = DFTCosmology.updateParams(self, pars)
         if not ok:
             return False
-        for p in pars:
-            if p.name == "Ok":
-                self.Ok = p.value
-            elif p.name == "Oh":
-                self.Oh = p.value
-            elif p.name == "Oe":
-                self.Oe = p.value
-            elif p.name == "w_dft":
-                self.w = p.value
-        self.l = 3.0 * self.w + 1.0
-        self.OL = 0.0
+        self.l = 3.0 * self.w - 1.0
         self.initialize()
         return True
 
 
-class DFTl2wCosmology(DFT1Cosmology):
-    """
-    DFT cosmology with constraint l = 2w and OL=0.
-    Free parameters: h, Ok, Oh, Oe, w. l is derived from w.
-    """
+class DFTl2wCosmology(DFTCosmology):
+    """DFT with constraint l = 2w, OL=0. Free: h, Ok, Oh, Oe, w."""
+
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value):
-        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=0.0, Oe=Oe, w=w, l=2.0*w)
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=2.0*w)
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
 
     def updateParams(self, pars):
-        ok = LCDMCosmology.updateParams(self, pars)
+        ok = DFTCosmology.updateParams(self, pars)
         if not ok:
             return False
-        for p in pars:
-            if p.name == "Ok":
-                self.Ok = p.value
-            elif p.name == "Oh":
-                self.Oh = p.value
-            elif p.name == "Oe":
-                self.Oe = p.value
-            elif p.name == "w_dft":
-                self.w = p.value
         self.l = 2.0 * self.w
-        self.OL = 0.0
         self.initialize()
         return True
 
 
-class DFTl0Cosmology(DFT1Cosmology):
-    """
-    DFT cosmology with fixed l=0 and OL=0.
-    Free parameters: h, Ok, Oh, Oe, w.
-    """
+class DFTl0Cosmology(DFTCosmology):
+    """DFT with fixed l=0, OL=0. Free: h, Ok, Oh, Oe, w."""
+
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value):
-        DFT1Cosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=0.0, Oe=Oe, w=w, l=0.0)
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=0.0)
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
 
     def updateParams(self, pars):
-        ok = LCDMCosmology.updateParams(self, pars)
+        ok = DFTCosmology.updateParams(self, pars)
         if not ok:
             return False
-        for p in pars:
-            if p.name == "Ok":
-                self.Ok = p.value
-            elif p.name == "Oh":
-                self.Oh = p.value
-            elif p.name == "Oe":
-                self.Oe = p.value
-            elif p.name == "w_dft":
-                self.w = p.value
-        self.OL = 0.0
-        self.l  = 0.0
+        self.l = 0.0
         self.initialize()
         return True

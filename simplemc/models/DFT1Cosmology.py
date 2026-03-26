@@ -193,6 +193,18 @@ class DFT1Cosmology(LCDMCosmology):
         phi_clamped = np.clip(phi_val, -50, 50)
         return np.exp(2.0 * phi_clamped) - 1.0
 
+    def prior_loglike(self):
+        # Penalize the l = -2 singularity from both sides.
+        # w < -1 (l+2 < 0) is allowed as long as |l+2| is not too small.
+        # sigma sets the scale; penalty is -0.5 at |l+2| = sigma.
+        abs_l_plus_2 = abs(self.l + 2.0)
+        if abs_l_plus_2 < 1e-10:
+            return -1e30
+        sigma = 0.3
+        if abs_l_plus_2 < 3.0 * sigma:
+            return -0.5 * (sigma / abs_l_plus_2) ** 2
+        return 0.0
+
     def RHSquared_a(self, a):
         z = 1/a - 1.0
         H0 = self.h * 100

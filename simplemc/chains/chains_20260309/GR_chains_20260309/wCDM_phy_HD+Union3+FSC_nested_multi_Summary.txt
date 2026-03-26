@@ -1,0 +1,17 @@
+SUMMARY
+-------
+analyzer: nested
+nested_algorithm: multi
+dynamic: False
+maxlike: 196.8870
+nlive: 1024
+niter: 11999
+ncall: 66965
+%eff: 19.4490
+logz: -203.9906 +/- 0.1001
+Om: 0.2878 +/- 0.0626
+Obh2: 0.0220 +/- 0.0005
+h: 0.6683 +/- 0.0293
+w: -0.8274 +/- 0.1420
+
+Elapsed time: 47.736 minutes = 2864.134 seconds 
