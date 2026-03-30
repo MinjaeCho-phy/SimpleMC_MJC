@@ -1,20 +1,37 @@
 from simplemc.cosmo.BaseCosmology import BaseCosmology
-from simplemc.cosmo.paramDefs import h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par, dft_l_par
+from simplemc.cosmo.paramDefs import (h_par, Ok_par, dft_Oh_par,
+                                       dft_Oe_par, dft_w_par, dft_l_par)
 
-from scipy.interpolate import interp1d
 import numpy as np
 from numba import njit
 
 
-@njit(cache=True)
-def _dft_rhs(z, y, h, Ok, Oh, OL, Oe, w, l):
-    phi = y[0]
-    H   = y[1]
+# ---------------------------------------------------------------------------
+#  Numba-accelerated ODE core
+#
+#  Physical constants are packed into a single float64 array `p`:
+#     p[0]=H0  p[1]=H0sq  p[2]=Ok  p[3]=Oh  p[4]=OL
+#     p[5]=Oe  p[6]=w     p[7]=alpha  p[8]=beta
+# ---------------------------------------------------------------------------
+
+@njit(cache=True, fastmath=True)
+def _rhs(z, phi, H, p):
+    """
+    DFT coupled ODE right-hand side.
+    Returns (dphi/dz, dH/dz) as two scalars (no array allocation).
+    """
+    H0    = p[0]
+    H0sq  = p[1]
+    Ok    = p[2]
+    Oh    = p[3]
+    OL    = p[4]
+    Oe    = p[5]
+    w     = p[6]
+    alpha = p[7]
+    beta  = p[8]
 
     if H <= 0.0:
-        H = h * 100.0
-
-    OeEvol1 = 6.0 * (w + 1.0) / (l + 2.0)
+        H = H0
 
     if phi > 50.0:
         phi_c = 50.0
@@ -23,53 +40,102 @@ def _dft_rhs(z, y, h, Ok, Oh, OL, Oe, w, l):
     else:
         phi_c = phi
 
-    OeEvol2 = np.exp(4.0 * phi_c / (l + 2.0))
+    zp1    = 1.0 + z
+    ee     = np.exp(beta * phi_c)
+    Oe_z   = Oe * zp1**alpha * ee
+    zp1_sq = zp1 * zp1
+    zp1_6  = zp1_sq * zp1_sq * zp1_sq
+    Hsq    = H * H
 
-    inSqrt = 3.0 / (h * 100.0)**2.0 + (
-        6.0 * Oe * (1.0 + z)**OeEvol1 * OeEvol2
-        + 6.0 * OL
-        + 6.0 * Ok * (1.0 + z)**2.0
-        + 6.0 * Oh * (1.0 + z)**6.0
-    ) / H**2.0
+    inSqrt = 3.0 / H0sq + 6.0 * (Oe_z + OL + Ok * zp1_sq
+                                   + Oh * zp1_6) / Hsq
 
-    if not inSqrt < 0.0:
-        s = inSqrt**0.5
-        dphidz = -1.0 * (3.0 - h * 100.0 * s) / (2.0 * (1.0 + z))
-        dHdz   = -(h * 100.0)**2.0 * (
-            (3.0 * w * Oe * (1.0 + z)**OeEvol1 * OeEvol2
-             + 2.0 * Ok * (1.0 + z)**2.0
-             + 6.0 * Oh * (1.0 + z)**6.0) / H
-            - H / (h * 100.0) * s
-        ) / (1.0 + z)
+    if inSqrt >= 0.0:
+        s = np.sqrt(inSqrt)
+        dphidz = -(3.0 - H0 * s) / (2.0 * zp1)
+        dHdz = -H0sq * (
+            (3.0 * w * Oe_z + 2.0 * Ok * zp1_sq + 6.0 * Oh * zp1_6) / H
+            - H * s / H0
+        ) / zp1
     else:
         dphidz = -1.0
         dHdz   = -1.0
 
-    return np.array([dphidz, dHdz])
+    return dphidz, dHdz
 
 
-@njit(cache=True)
-def _dft_solve(y0, z_start, z_end, steps, h, Ok, Oh, OL, Oe, w, l):
-    z_vals = np.linspace(z_start, z_end, steps)
-    dz     = z_vals[1] - z_vals[0]
-    y_vals = np.zeros((steps, 2))
-    y_vals[0] = y0
-    y = y0.copy()
+@njit(cache=True, fastmath=True)
+def _make_params(H0, Ok, Oh, OL, Oe, w, l):
+    """Pack pre-computed constants into a flat array for _rhs."""
+    lp2   = l + 2.0
+    alpha = 6.0 * (w + 1.0) / lp2
+    beta  = 4.0 / lp2
+    p = np.empty(9)
+    p[0] = H0
+    p[1] = H0 * H0
+    p[2] = Ok
+    p[3] = Oh
+    p[4] = OL
+    p[5] = Oe
+    p[6] = w
+    p[7] = alpha
+    p[8] = beta
+    return p
+
+
+# ---------------------------------------------------------------------------
+#  Fixed-step RK4 solver  (primary — fastest for this ODE)
+# ---------------------------------------------------------------------------
+
+@njit(cache=True, fastmath=True)
+def _dft_solve_rk4(H0, Ok, Oh, OL, Oe, w, l, z_max, steps):
+    """
+    Fixed-step RK4 solve of the DFT coupled ODEs + cumulative Da(z)
+    integral, all in a single pass on a uniform z grid.
+
+    Returns (H_arr, phi_arr, Da_arr) with `steps` elements each.
+    """
+    p  = _make_params(H0, Ok, Oh, OL, Oe, w, l)
+    dz = z_max / (steps - 1)
+
+    H_arr   = np.empty(steps)
+    phi_arr = np.empty(steps)
+    Da_arr  = np.zeros(steps)
+
+    phi = 0.0
+    H   = H0
+    H_arr[0]   = H0
+    phi_arr[0] = 0.0
+
     for i in range(steps - 1):
-        z  = z_vals[i]
-        k1 = _dft_rhs(z,            y,            h, Ok, Oh, OL, Oe, w, l)
-        k2 = _dft_rhs(z + 0.5*dz,   y + 0.5*dz*k1, h, Ok, Oh, OL, Oe, w, l)
-        k3 = _dft_rhs(z + 0.5*dz,   y + 0.5*dz*k2, h, Ok, Oh, OL, Oe, w, l)
-        k4 = _dft_rhs(z + dz,        y +     dz*k3, h, Ok, Oh, OL, Oe, w, l)
-        y  = y + (dz / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
-        y_vals[i + 1] = y
-    return z_vals, y_vals
+        z  = i * dz
+        zh = z + 0.5 * dz
 
+        dp1, dH1 = _rhs(z,      phi,               H,               p)
+        dp2, dH2 = _rhs(zh,     phi + 0.5*dz*dp1,  H + 0.5*dz*dH1, p)
+        dp3, dH3 = _rhs(zh,     phi + 0.5*dz*dp2,  H + 0.5*dz*dH2, p)
+        dp4, dH4 = _rhs(z + dz, phi + dz*dp3,      H + dz*dH3,     p)
+
+        phi += (dz / 6.0) * (dp1 + 2.0*dp2 + 2.0*dp3 + dp4)
+        H   += (dz / 6.0) * (dH1 + 2.0*dH2 + 2.0*dH3 + dH4)
+
+        H_arr[i + 1]   = H
+        phi_arr[i + 1] = phi
+
+        # Accumulate comoving distance: Da(z) = int_0^z H0/H(z') dz'
+        Da_arr[i + 1] = Da_arr[i] + 0.5 * dz * (H0 / H_arr[i] + H0 / H)
+
+    return H_arr, phi_arr, Da_arr
+
+
+# ---------------------------------------------------------------------------
+#  DFTCosmology  (base class for all DFT variants)
+# ---------------------------------------------------------------------------
 
 class DFTCosmology(BaseCosmology):
     """
     DFT cosmology (OL=0 by default). Solves the DFT Friedmann equations
-    via RK4 and interpolates H(z) and phi(z).
+    via fixed-step RK4 and interpolates H(z), phi(z), Da(z).
 
     Parameters
     ----------
@@ -82,6 +148,9 @@ class DFTCosmology(BaseCosmology):
     l  : second EoS parameter  (singular at l = -2)
     """
 
+    _Z_MAX    = 8.0
+    _RK_STEPS = 800
+
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value, l=dft_l_par.value):
         self.Ok = Ok
@@ -91,9 +160,9 @@ class DFTCosmology(BaseCosmology):
         self.w  = w
         self.l  = l
 
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par, dft_l_par]
-        self.rk_steps  = 5000
-        self.z_values  = np.linspace(0.0, 8.0, 500)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par,
+                           dft_w_par, dft_l_par]
+        self._z_grid = np.linspace(0.0, self._Z_MAX, self._RK_STEPS)
 
         BaseCosmology.__init__(self, h)
         self.updateParams([])
@@ -101,7 +170,9 @@ class DFTCosmology(BaseCosmology):
     def freeParameters(self):
         return self.parameters
 
-    def updateParams(self, pars):
+    # -- parameter update (no ODE solve) ------------------------------------
+    def _set_params(self, pars):
+        """Set parameter values without triggering initialize()."""
         BaseCosmology.updateParams(self, pars)
         for p in pars:
             if p.name == "Ok":
@@ -115,32 +186,35 @@ class DFTCosmology(BaseCosmology):
             elif p.name == "l_dft":
                 self.l = p.value
         self.OL = 0.0
+
+    def updateParams(self, pars):
+        self._set_params(pars)
         self.initialize()
         return True
 
+    # -- ODE solve + precompute all lookups ---------------------------------
     def initialize(self):
-        y0 = np.array([0.0, self.h * 100.0])
-        z_out, y_out = _dft_solve(
-            y0, 0.0, 8.0, self.rk_steps,
-            self.h, self.Ok, self.Oh, self.OL, self.Oe, self.w, self.l
+        H0 = self.h * 100.0
+        H_arr, phi_arr, Da_arr = _dft_solve_rk4(
+            H0, self.Ok, self.Oh, self.OL, self.Oe, self.w, self.l,
+            self._Z_MAX, self._RK_STEPS
         )
-        phi_fine = interp1d(z_out, y_out[:, 0], kind='cubic', fill_value='extrapolate')
-        H_fine   = interp1d(z_out, y_out[:, 1], kind='cubic', fill_value='extrapolate')
-        phi_c = phi_fine(self.z_values)
-        H_c   = H_fine(self.z_values)
-        self.phiinterp = interp1d(self.z_values, phi_c, fill_value='extrapolate')
-        self.Hinterp   = interp1d(self.z_values, H_c,   fill_value='extrapolate')
+        self._H0      = H0
+        self._H_arr   = H_arr
+        self._phi_arr = phi_arr
+        self._Da_arr  = Da_arr
         return True
 
+    # -- fast lookups (np.interp on uniform grid) ---------------------------
     def hub(self, z):
-        return self.Hinterp(z)
+        return np.interp(z, self._z_grid, self._H_arr)
 
     def fine_structure_constant(self, a):
-        phi = np.clip(self.phiinterp(1.0/a - 1.0), -50, 50)
+        z = 1.0 / a - 1.0
+        phi = np.clip(np.interp(z, self._z_grid, self._phi_arr), -50, 50)
         return np.exp(2.0 * phi) - 1.0
 
     def prior_loglike(self):
-        # Soft barrier around the l = -2 singularity (both sides allowed).
         abs_l2 = abs(self.l + 2.0)
         if abs_l2 < 1e-10:
             return -1e30
@@ -150,13 +224,35 @@ class DFTCosmology(BaseCosmology):
         return 0.0
 
     def RHSquared_a(self, a):
-        H0 = self.h * 100.0
-        H  = self.hub(1.0/a - 1.0)
-        result = (H / H0)**2
+        z = 1.0 / a - 1.0
+        H = np.interp(z, self._z_grid, self._H_arr)
+        result = (H / self._H0) ** 2
         if not np.isfinite(result) or result <= 0:
             return 1e-30
         return result
 
+    # -- overrides: precomputed distance functions --------------------------
+    def Hinv_z(self, z):
+        z = np.atleast_1d(z)
+        H = np.interp(z, self._z_grid, self._H_arr)
+        return self._H0 / H
+
+    def Da_z(self, z):
+        z = np.atleast_1d(z)
+        r = np.interp(z, self._z_grid, self._Da_arr)
+        if self.Curv == 0:
+            return r
+        elif self.Curv > 0:
+            q = np.sqrt(self.Curv)
+            return np.sinh(r * q) / q
+        else:
+            q = np.sqrt(-self.Curv)
+            return np.sin(r * q) / q
+
+
+# ---------------------------------------------------------------------------
+#  Constrained subclasses
+# ---------------------------------------------------------------------------
 
 class DFTw1l2Cosmology(DFTCosmology):
     """DFT with fixed w=1, l=2, OL=0. Free: h, Ok, Oh, Oe."""
@@ -167,9 +263,7 @@ class DFTw1l2Cosmology(DFTCosmology):
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par]
 
     def updateParams(self, pars):
-        ok = DFTCosmology.updateParams(self, pars)
-        if not ok:
-            return False
+        self._set_params(pars)
         self.w = 1.0
         self.l = 2.0
         self.initialize()
@@ -181,13 +275,12 @@ class DFTl3w1Cosmology(DFTCosmology):
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value):
-        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=3.0*w - 1.0)
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w,
+                              l=3.0*w - 1.0)
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
 
     def updateParams(self, pars):
-        ok = DFTCosmology.updateParams(self, pars)
-        if not ok:
-            return False
+        self._set_params(pars)
         self.l = 3.0 * self.w - 1.0
         self.initialize()
         return True
@@ -202,9 +295,7 @@ class DFTl2wCosmology(DFTCosmology):
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
 
     def updateParams(self, pars):
-        ok = DFTCosmology.updateParams(self, pars)
-        if not ok:
-            return False
+        self._set_params(pars)
         self.l = 2.0 * self.w
         self.initialize()
         return True
@@ -219,9 +310,7 @@ class DFTl0Cosmology(DFTCosmology):
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
 
     def updateParams(self, pars):
-        ok = DFTCosmology.updateParams(self, pars)
-        if not ok:
-            return False
+        self._set_params(pars)
         self.l = 0.0
         self.initialize()
         return True
