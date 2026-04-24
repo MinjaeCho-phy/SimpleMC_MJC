@@ -66,6 +66,8 @@ def ParseModel(model, **kwargs):
 
     if model == "LCDM":
         T = LCDMCosmology()
+    elif model == "LCDM_fsc":
+        T = LCDMCosmology(fixfsc=False)
     elif model == "wCDM":
         T = wCDMCosmology()
     elif model == "owa0CDM":
@@ -82,20 +84,44 @@ def ParseModel(model, **kwargs):
         T = LDFTl0Cosmology()
     elif model == "DFT":
         T = DFTCosmology()
+    elif model == "DFT_fsc":
+        T = DFTCosmology(fixfsc=False)
     elif model == "DFT_w1l2":
         T = DFTw1l2Cosmology()
+    elif model == "DFT_w1l2_fsc":
+        T = DFTw1l2Cosmology(fixfsc=False)
     elif model == "DFT_l3w1":
         T = DFTl3w1Cosmology()
+    elif model == "DFT_l3w1_fsc":
+        T = DFTl3w1Cosmology(fixfsc=False)
     elif model == "DFT_l2w":
         T = DFTl2wCosmology()
+    elif model == "DFT_l2w_fsc":
+        T = DFTl2wCosmology(fixfsc=False)
     elif model == "DFT_l0":
         T = DFTl0Cosmology()
+    elif model == "DFT_l0_fsc":
+        T = DFTl0Cosmology(fixfsc=False)
     elif model == "DFT2":
         T = DFT2Cosmology()
     elif model == "DFTvac":
         T = DFTVacuum()
+    elif model == "DFTvac_fsc":
+        T = DFTVacuum(fixfsc=False)
     elif model == "DFTvac_noh":
         T = DFTVacuum(ishzero=True)
+    elif model == "DFTvac_noh_fsc":
+        T = DFTVacuum(ishzero=True, fixfsc=False)
+    # Backward-compat aliases — the DFT1Vacuum class has been merged into
+    # DFTVacuum, but existing chains under the old names are still reproducible.
+    elif model == "DFT1vac":
+        T = DFTVacuum()
+    elif model == "DFT1vac_fsc":
+        T = DFTVacuum(fixfsc=False)
+    elif model == "DFT1vac_noh":
+        T = DFTVacuum(ishzero=True)
+    elif model == "DFT1vac_noh_fsc":
+        T = DFTVacuum(ishzero=True, fixfsc=False)
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':

@@ -1,9 +1,16 @@
 from simplemc.cosmo.BaseCosmology import BaseCosmology
 from simplemc.cosmo.paramDefs import (h_par, Ok_par, dft_Oh_par,
-                                       dft_Oe_par, dft_w_par, dft_l_par)
+                                       dft_Oe_par, dft_w_par, dft_l_par,
+                                       alpha_fsc_par)
 
 import numpy as np
 from numba import njit
+
+
+# Lab reference for the fine-structure constant, matched to the value
+# used in LCDMCosmology.fine_structure_constant and DFT1Vacuum so that
+# gamma = alpha_fsc / ALPHA_LAB = 1 reproduces the fixed-fsc prediction.
+ALPHA_LAB = 0.0072973525643
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +159,8 @@ class DFTCosmology(BaseCosmology):
     _RK_STEPS = 800
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 Oe=dft_Oe_par.value, w=dft_w_par.value, l=dft_l_par.value):
+                 Oe=dft_Oe_par.value, w=dft_w_par.value, l=dft_l_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
         self.Ok = Ok
         self.Oh = Oh
         self.OL = 0.0
@@ -160,8 +168,16 @@ class DFTCosmology(BaseCosmology):
         self.w  = w
         self.l  = l
 
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par,
-                           dft_w_par, dft_l_par]
+        # Calibration nuisance for FSC: gamma = alpha_fsc / ALPHA_LAB
+        # absorbs universal FSC systematic, symmetric with GR treatment.
+        self.fixfsc    = fixfsc
+        self.alpha_fsc = alpha_fsc
+
+        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par,
+                       dft_w_par, dft_l_par]
+        if not fixfsc:
+            base_params = base_params + [alpha_fsc_par]
+        self.parameters = base_params
         self._z_grid = np.linspace(0.0, self._Z_MAX, self._RK_STEPS)
 
         BaseCosmology.__init__(self, h)
@@ -185,6 +201,8 @@ class DFTCosmology(BaseCosmology):
                 self.w = p.value
             elif p.name == "l_dft":
                 self.l = p.value
+            elif p.name == "alpha_fsc" and not self.fixfsc:
+                self.alpha_fsc = p.value
         self.OL = 0.0
 
     def updateParams(self, pars):
@@ -212,7 +230,8 @@ class DFTCosmology(BaseCosmology):
     def fine_structure_constant(self, a):
         z = 1.0 / a - 1.0
         phi = np.clip(np.interp(z, self._z_grid, self._phi_arr), -50, 50)
-        return np.exp(2.0 * phi) - 1.0
+        gamma = self.alpha_fsc / ALPHA_LAB
+        return gamma * np.exp(2.0 * phi) - 1.0
 
     def prior_loglike(self):
         abs_l2 = abs(self.l + 2.0)
@@ -255,12 +274,22 @@ class DFTCosmology(BaseCosmology):
 # ---------------------------------------------------------------------------
 
 class DFTw1l2Cosmology(DFTCosmology):
-    """DFT with fixed w=1, l=2, OL=0. Free: h, Ok, Oh, Oe."""
+    """DFT with fixed w=1, l=2, OL=0. Free: h, Ok, Oh, Oe.
+
+    With ``fixfsc=False``, also marginalizes over alpha_fsc as a
+    calibration nuisance (gamma factor on the FSC observable),
+    symmetric with the GR LCDM_fsc treatment.
+    """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 Oe=dft_Oe_par.value):
-        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=1.0, l=2.0)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par]
+                 Oe=dft_Oe_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=1.0, l=2.0,
+                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par]
+        if not fixfsc:
+            base_params = base_params + [alpha_fsc_par]
+        self.parameters = base_params
 
     def updateParams(self, pars):
         self._set_params(pars)
@@ -271,13 +300,22 @@ class DFTw1l2Cosmology(DFTCosmology):
 
 
 class DFTl3w1Cosmology(DFTCosmology):
-    """DFT with constraint l = 3w - 1, OL=0. Free: h, Ok, Oh, Oe, w."""
+    """DFT with constraint l = 3w - 1, OL=0. Free: h, Ok, Oh, Oe, w.
+
+    With ``fixfsc=False``, also marginalizes over alpha_fsc (gamma factor
+    on the FSC observable), symmetric with LCDM_fsc.
+    """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 Oe=dft_Oe_par.value, w=dft_w_par.value):
+                 Oe=dft_Oe_par.value, w=dft_w_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w,
-                              l=3.0*w - 1.0)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+                              l=3.0*w - 1.0,
+                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+        if not fixfsc:
+            base_params = base_params + [alpha_fsc_par]
+        self.parameters = base_params
 
     def updateParams(self, pars):
         self._set_params(pars)
@@ -287,12 +325,21 @@ class DFTl3w1Cosmology(DFTCosmology):
 
 
 class DFTl2wCosmology(DFTCosmology):
-    """DFT with constraint l = 2w, OL=0. Free: h, Ok, Oh, Oe, w."""
+    """DFT with constraint l = 2w, OL=0. Free: h, Ok, Oh, Oe, w.
+
+    With ``fixfsc=False``, also marginalizes over alpha_fsc (gamma factor
+    on the FSC observable), symmetric with LCDM_fsc.
+    """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 Oe=dft_Oe_par.value, w=dft_w_par.value):
-        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=2.0*w)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+                 Oe=dft_Oe_par.value, w=dft_w_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=2.0*w,
+                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+        if not fixfsc:
+            base_params = base_params + [alpha_fsc_par]
+        self.parameters = base_params
 
     def updateParams(self, pars):
         self._set_params(pars)
@@ -302,12 +349,21 @@ class DFTl2wCosmology(DFTCosmology):
 
 
 class DFTl0Cosmology(DFTCosmology):
-    """DFT with fixed l=0, OL=0. Free: h, Ok, Oh, Oe, w."""
+    """DFT with fixed l=0, OL=0. Free: h, Ok, Oh, Oe, w.
+
+    With ``fixfsc=False``, also marginalizes over alpha_fsc (gamma factor
+    on the FSC observable), symmetric with LCDM_fsc.
+    """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 Oe=dft_Oe_par.value, w=dft_w_par.value):
-        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=0.0)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+                 Oe=dft_Oe_par.value, w=dft_w_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+        DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=0.0,
+                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+        if not fixfsc:
+            base_params = base_params + [alpha_fsc_par]
+        self.parameters = base_params
 
     def updateParams(self, pars):
         self._set_params(pars)
