@@ -1,7 +1,7 @@
 from simplemc.DriverMC import DriverMC
 
 "read all setting from .ini file"
-inifile = "baseConfig4.ini"
+inifile = "baseConfig.ini"
 
 analyzer = DriverMC(iniFile=inifile)
 analyzer.executer()

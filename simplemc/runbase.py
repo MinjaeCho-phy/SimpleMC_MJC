@@ -4,7 +4,7 @@ import sys
 # Cosmologies already included
 from .models import LCDMCosmology
 from .models.LDFTCosmology import LDFTCosmology, LDFTw1l2Cosmology, LDFTl3w1Cosmology, LDFTl2wCosmology, LDFTl0Cosmology
-from .models.DFTCosmology import DFTCosmology, DFTw1l2Cosmology, DFTl3w1Cosmology, DFTl2wCosmology, DFTl0Cosmology
+from .models.DFT_fix import DFTCosmology, DFTw1l2Cosmology, DFTl3w1Cosmology, DFTl2wCosmology, DFTl0Cosmology
 from .models.DFT2Cosmology import DFT2Cosmology
 from .models.DFTVacuum import DFTVacuum
 from .models.wCDMCosmology import wCDMCosmology
