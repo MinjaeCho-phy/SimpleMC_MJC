@@ -1,9 +1,16 @@
 from simplemc.cosmo.BaseCosmology import BaseCosmology
-from simplemc.cosmo.paramDefs import h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par, dft_l_par
+from simplemc.cosmo.paramDefs import (h_par, Ok_par, dft_Oh_par, dft_OL_par,
+                                       dft_Oe_par, dft_w_par, dft_l_par,
+                                       alpha_fsc_par)
 
 from scipy.interpolate import interp1d
 import numpy as np
 from numba import njit
+
+
+# Lab reference matching LCDMCosmology.fine_structure_constant so that
+# gamma = alpha_fsc / ALPHA_LAB = 1 reproduces the fixed-fsc prediction.
+ALPHA_LAB = 0.0072973525643
 
 
 @njit(cache=True)
@@ -84,16 +91,21 @@ class LDFTCosmology(BaseCosmology):
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  OL=dft_OL_par.value, Oe=dft_Oe_par.value,
-                 w=dft_w_par.value, l=dft_l_par.value):
+                 w=dft_w_par.value, l=dft_l_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=False):
         self.Ok = Ok
         self.Oh = Oh
         self.OL = OL
         self.Oe = Oe
         self.w  = w
         self.l  = l
+        self.fixfsc = fixfsc
+        self.alpha_fsc = ALPHA_LAB if fixfsc else alpha_fsc
 
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par,
                            dft_Oe_par, dft_w_par, dft_l_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
         self.rk_steps = 5000
         self.z_values = np.linspace(0.0, 8.0, 500)
 
@@ -118,6 +130,8 @@ class LDFTCosmology(BaseCosmology):
                 self.w = p.value
             elif p.name == "l_dft":
                 self.l = p.value
+            elif p.name == "alpha_fsc" and not self.fixfsc:
+                self.alpha_fsc = p.value
         self.initialize()
         return True
 
@@ -140,7 +154,8 @@ class LDFTCosmology(BaseCosmology):
 
     def fine_structure_constant(self, a):
         phi = np.clip(self.phiinterp(1.0/a - 1.0), -50, 50)
-        return np.exp(2.0 * phi) - 1.0
+        gamma = self.alpha_fsc / ALPHA_LAB
+        return gamma * np.exp(2.0 * phi) - 1.0
 
     def prior_loglike(self):
         # Soft barrier around the l = -2 singularity (both sides allowed).
@@ -163,12 +178,16 @@ class LDFTCosmology(BaseCosmology):
 
 
 class LDFTw1l2Cosmology(LDFTCosmology):
-    """LDFT with fixed w=1, l=2. Free: h, Ok, Oh, OL, Oe."""
+    """LDFT with fixed w=1, l=2. Free: h, Ok, Oh, OL, Oe (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 OL=dft_OL_par.value, Oe=dft_Oe_par.value):
-        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=1.0, l=2.0)
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=False):
+        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=1.0, l=2.0,
+                               alpha_fsc=alpha_fsc, fixfsc=fixfsc)
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         ok = LDFTCosmology.updateParams(self, pars)
@@ -181,12 +200,17 @@ class LDFTw1l2Cosmology(LDFTCosmology):
 
 
 class LDFTl3w1Cosmology(LDFTCosmology):
-    """LDFT with constraint l = 3w + 1. Free: h, Ok, Oh, OL, Oe, w."""
+    """LDFT with constraint l = 3w + 1. Free: h, Ok, Oh, OL, Oe, w (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value):
-        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w, l=3.0*w + 1.0)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=False):
+        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w,
+                               l=3.0*w + 1.0, alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par,
+                           dft_w_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         ok = LDFTCosmology.updateParams(self, pars)
@@ -198,12 +222,17 @@ class LDFTl3w1Cosmology(LDFTCosmology):
 
 
 class LDFTl2wCosmology(LDFTCosmology):
-    """LDFT with constraint l = 2w. Free: h, Ok, Oh, OL, Oe, w."""
+    """LDFT with constraint l = 2w. Free: h, Ok, Oh, OL, Oe, w (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value):
-        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w, l=2.0*w)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=False):
+        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w,
+                               l=2.0*w, alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par,
+                           dft_w_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         ok = LDFTCosmology.updateParams(self, pars)
@@ -215,12 +244,17 @@ class LDFTl2wCosmology(LDFTCosmology):
 
 
 class LDFTl0Cosmology(LDFTCosmology):
-    """LDFT with fixed l=0. Free: h, Ok, Oh, OL, Oe, w."""
+    """LDFT with fixed l=0. Free: h, Ok, Oh, OL, Oe, w (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
-                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value):
-        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w, l=0.0)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par, dft_w_par]
+                 OL=dft_OL_par.value, Oe=dft_Oe_par.value, w=dft_w_par.value,
+                 alpha_fsc=alpha_fsc_par.value, fixfsc=False):
+        LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w,
+                               l=0.0, alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_OL_par, dft_Oe_par,
+                           dft_w_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         ok = LDFTCosmology.updateParams(self, pars)

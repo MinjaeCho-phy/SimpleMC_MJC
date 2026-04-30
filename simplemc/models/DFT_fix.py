@@ -10,7 +10,10 @@ Changes vs. the previous DFT_fix.py:
   3. Broken-point rejection signal moved into `prior_loglike()`:
      `_broken=True` → `-1e30`. Sampler sees a clean prior reject;
      downstream observables never crash.
-  4. `fixfsc` removed — alpha_fsc always free (per user requirement).
+  4. `fixfsc` re-enabled with INVERTED default: now `fixfsc=False`
+     (alpha_fsc free) is the default. Pass `fixfsc=True` to fix
+     alpha_fsc at ALPHA_LAB and drop it from the free-parameter list.
+     runbase.py exposes the fixed case via the `_fsc` suffix.
   5. `error_model='numpy'` on numba RHS — IEEE-style inf/NaN instead of
      ZeroDivisionError on the λ=-2 boundary; slight speed-up.
 
@@ -203,7 +206,9 @@ def _dft_solve_rk4(H0, Ok, Oh, OL, Oe, w, l, z_max, steps):
 class DFTCosmology(BaseCosmology):
     """DFT cosmology (OL = 0). RK4 + interpolation.
 
-    alpha_fsc is always a free parameter (no fixfsc switch).
+    `fixfsc=False` (default) — alpha_fsc is a free parameter.
+    `fixfsc=True`            — alpha_fsc held at ALPHA_LAB, dropped from
+                               the free-parameter list.
 
     Recollapse handling: if the ODE produces H ≤ 1e-3 or non-finite at
     any z ≤ z_max, that parameter set is rejected via
@@ -217,15 +222,14 @@ class DFTCosmology(BaseCosmology):
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value, l=dft_l_par.value,
                  alpha_fsc=alpha_fsc_par.value, fixfsc=False):
-        # `fixfsc` is accepted for runbase.py / chain-name compatibility
-        # but is intentionally ignored — alpha_fsc is always free.
         self.Ok = Ok
         self.Oh = Oh
         self.OL = 0.0
         self.Oe = Oe
         self.w  = w
         self.l  = l
-        self.alpha_fsc = alpha_fsc
+        self.fixfsc = fixfsc
+        self.alpha_fsc = ALPHA_LAB if fixfsc else alpha_fsc
 
         self._H0      = h * 100.0
         self._H_arr   = None
@@ -234,7 +238,9 @@ class DFTCosmology(BaseCosmology):
         self._broken  = False
 
         self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par,
-                           dft_w_par, dft_l_par, alpha_fsc_par]
+                           dft_w_par, dft_l_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
         self._z_grid = np.linspace(0.0, self._Z_MAX, self._RK_STEPS)
 
         BaseCosmology.__init__(self, h)
@@ -257,7 +263,7 @@ class DFTCosmology(BaseCosmology):
                 self.w = p.value
             elif p.name == "l_dft":
                 self.l = p.value
-            elif p.name == "alpha_fsc":
+            elif p.name == "alpha_fsc" and not self.fixfsc:
                 self.alpha_fsc = p.value
         self.OL = 0.0
 
@@ -343,15 +349,16 @@ class DFTCosmology(BaseCosmology):
 # ---------------------------------------------------------------------------
 
 class DFTw1l2Cosmology(DFTCosmology):
-    """DFT with fixed w=1, l=2, OL=0. Free: h, Ok, Oh, Oe, alpha_fsc."""
+    """DFT with fixed w=1, l=2, OL=0. Free: h, Ok, Oh, Oe (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, alpha_fsc=alpha_fsc_par.value,
                  fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=1.0, l=2.0,
-                              alpha_fsc=alpha_fsc)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par,
-                           alpha_fsc_par]
+                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         self._set_params(pars)
@@ -362,15 +369,16 @@ class DFTw1l2Cosmology(DFTCosmology):
 
 
 class DFTl3w1Cosmology(DFTCosmology):
-    """DFT with constraint l = 3w - 1, OL=0. Free: h, Ok, Oh, Oe, w, alpha_fsc."""
+    """DFT with constraint l = 3w - 1, OL=0. Free: h, Ok, Oh, Oe, w (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
                  alpha_fsc=alpha_fsc_par.value, fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w,
-                              l=3.0*w - 1.0, alpha_fsc=alpha_fsc)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par,
-                           alpha_fsc_par]
+                              l=3.0*w - 1.0, alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         self._set_params(pars)
@@ -380,15 +388,16 @@ class DFTl3w1Cosmology(DFTCosmology):
 
 
 class DFTl2wCosmology(DFTCosmology):
-    """DFT with constraint l = 2w, OL=0. Free: h, Ok, Oh, Oe, w, alpha_fsc."""
+    """DFT with constraint l = 2w, OL=0. Free: h, Ok, Oh, Oe, w (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
                  alpha_fsc=alpha_fsc_par.value, fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=2.0*w,
-                              alpha_fsc=alpha_fsc)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par,
-                           alpha_fsc_par]
+                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         self._set_params(pars)
@@ -398,15 +407,16 @@ class DFTl2wCosmology(DFTCosmology):
 
 
 class DFTl0Cosmology(DFTCosmology):
-    """DFT with fixed l=0, OL=0. Free: h, Ok, Oh, Oe, w, alpha_fsc."""
+    """DFT with fixed l=0, OL=0. Free: h, Ok, Oh, Oe, w (+ alpha_fsc if fixfsc=False)."""
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
                  alpha_fsc=alpha_fsc_par.value, fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=0.0,
-                              alpha_fsc=alpha_fsc)
-        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par,
-                           alpha_fsc_par]
+                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
+        self.parameters = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+        if not fixfsc:
+            self.parameters.append(alpha_fsc_par)
 
     def updateParams(self, pars):
         self._set_params(pars)

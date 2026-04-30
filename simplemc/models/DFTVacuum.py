@@ -92,14 +92,15 @@ class DFTVacuum(LCDMCosmology):
     ishzero : bool
         If True, fix Omega_h = 0 and drop it from the free-parameter list.
     fixfsc : bool
-        If True (default), gamma = 1 and alpha_fsc is not free. If False,
+        If True, gamma = 1 and alpha_fsc is not free. If False (default),
         alpha_fsc is marginalized over as a calibration nuisance,
-        symmetric with the GR LCDM_fsc treatment.
+        consistent with the rest of the DFT family. runbase.py exposes
+        the fixed case via the `_fsc` suffix.
     """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  alpha_fsc=alpha_fsc_par.value,
-                 ishzero=False, fixfsc=True):
+                 ishzero=False, fixfsc=False):
         self.h  = h
         self.Ok = Ok
         self.ishzero = ishzero
