@@ -73,48 +73,90 @@ def ParseModel(model, **kwargs):
     elif model == "owa0CDM":
         T = owa0CDMCosmology()
     # DFT-family naming convention:
-    #   bare name  → fixfsc=False (alpha_fsc free, default)
-    #   _fsc suffix → fixfsc=True (alpha_fsc held at lab value)
+    #   bare name   → fixfsc=False, ishzero=False (alpha_fsc free, Oh free; default)
+    #   _fsc suffix → fixfsc=True  (alpha_fsc held at lab value)
+    #   _noh suffix → ishzero=True (Omega_h fixed to 0, dropped from free list)
+    #   suffixes combine, e.g. _noh_fsc.
     elif model == "LDFT":
         T = LDFTCosmology()
     elif model == "LDFT_fsc":
         T = LDFTCosmology(fixfsc=True)
+    elif model == "LDFT_noh":
+        T = LDFTCosmology(ishzero=True)
+    elif model == "LDFT_noh_fsc":
+        T = LDFTCosmology(ishzero=True, fixfsc=True)
     elif model == "LDFT_w1l2":
         T = LDFTw1l2Cosmology()
     elif model == "LDFT_w1l2_fsc":
         T = LDFTw1l2Cosmology(fixfsc=True)
+    elif model == "LDFT_w1l2_noh":
+        T = LDFTw1l2Cosmology(ishzero=True)
+    elif model == "LDFT_w1l2_noh_fsc":
+        T = LDFTw1l2Cosmology(ishzero=True, fixfsc=True)
     elif model == "LDFT_l3w1":
         T = LDFTl3w1Cosmology()
     elif model == "LDFT_l3w1_fsc":
         T = LDFTl3w1Cosmology(fixfsc=True)
+    elif model == "LDFT_l3w1_noh":
+        T = LDFTl3w1Cosmology(ishzero=True)
+    elif model == "LDFT_l3w1_noh_fsc":
+        T = LDFTl3w1Cosmology(ishzero=True, fixfsc=True)
     elif model == "LDFT_l2w":
         T = LDFTl2wCosmology()
     elif model == "LDFT_l2w_fsc":
         T = LDFTl2wCosmology(fixfsc=True)
+    elif model == "LDFT_l2w_noh":
+        T = LDFTl2wCosmology(ishzero=True)
+    elif model == "LDFT_l2w_noh_fsc":
+        T = LDFTl2wCosmology(ishzero=True, fixfsc=True)
     elif model == "LDFT_l0":
         T = LDFTl0Cosmology()
     elif model == "LDFT_l0_fsc":
         T = LDFTl0Cosmology(fixfsc=True)
+    elif model == "LDFT_l0_noh":
+        T = LDFTl0Cosmology(ishzero=True)
+    elif model == "LDFT_l0_noh_fsc":
+        T = LDFTl0Cosmology(ishzero=True, fixfsc=True)
     elif model == "DFT":
         T = DFTCosmology()
     elif model == "DFT_fsc":
         T = DFTCosmology(fixfsc=True)
+    elif model == "DFT_noh":
+        T = DFTCosmology(ishzero=True)
+    elif model == "DFT_noh_fsc":
+        T = DFTCosmology(ishzero=True, fixfsc=True)
     elif model == "DFT_w1l2":
         T = DFTw1l2Cosmology()
     elif model == "DFT_w1l2_fsc":
         T = DFTw1l2Cosmology(fixfsc=True)
+    elif model == "DFT_w1l2_noh":
+        T = DFTw1l2Cosmology(ishzero=True)
+    elif model == "DFT_w1l2_noh_fsc":
+        T = DFTw1l2Cosmology(ishzero=True, fixfsc=True)
     elif model == "DFT_l3w1":
         T = DFTl3w1Cosmology()
     elif model == "DFT_l3w1_fsc":
         T = DFTl3w1Cosmology(fixfsc=True)
+    elif model == "DFT_l3w1_noh":
+        T = DFTl3w1Cosmology(ishzero=True)
+    elif model == "DFT_l3w1_noh_fsc":
+        T = DFTl3w1Cosmology(ishzero=True, fixfsc=True)
     elif model == "DFT_l2w":
         T = DFTl2wCosmology()
     elif model == "DFT_l2w_fsc":
         T = DFTl2wCosmology(fixfsc=True)
+    elif model == "DFT_l2w_noh":
+        T = DFTl2wCosmology(ishzero=True)
+    elif model == "DFT_l2w_noh_fsc":
+        T = DFTl2wCosmology(ishzero=True, fixfsc=True)
     elif model == "DFT_l0":
         T = DFTl0Cosmology()
     elif model == "DFT_l0_fsc":
         T = DFTl0Cosmology(fixfsc=True)
+    elif model == "DFT_l0_noh":
+        T = DFTl0Cosmology(ishzero=True)
+    elif model == "DFT_l0_noh_fsc":
+        T = DFTl0Cosmology(ishzero=True, fixfsc=True)
     elif model == "DFT2":
         T = DFT2Cosmology()
     elif model == "DFTvac":

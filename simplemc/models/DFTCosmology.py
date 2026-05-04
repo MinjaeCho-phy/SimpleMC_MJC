@@ -160,9 +160,11 @@ class DFTCosmology(BaseCosmology):
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value, l=dft_l_par.value,
-                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+                 alpha_fsc=alpha_fsc_par.value,
+                 ishzero=False, fixfsc=True):
         self.Ok = Ok
-        self.Oh = Oh
+        self.ishzero = ishzero
+        self.Oh = 0.0 if ishzero else Oh
         self.OL = 0.0
         self.Oe = Oe
         self.w  = w
@@ -173,8 +175,10 @@ class DFTCosmology(BaseCosmology):
         self.fixfsc    = fixfsc
         self.alpha_fsc = alpha_fsc
 
-        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par,
-                       dft_w_par, dft_l_par]
+        base_params = [h_par, Ok_par]
+        if not ishzero:
+            base_params.append(dft_Oh_par)
+        base_params += [dft_Oe_par, dft_w_par, dft_l_par]
         if not fixfsc:
             base_params = base_params + [alpha_fsc_par]
         self.parameters = base_params
@@ -193,7 +197,7 @@ class DFTCosmology(BaseCosmology):
         for p in pars:
             if p.name == "Ok":
                 self.Ok = p.value
-            elif p.name == "Oh":
+            elif p.name == "Oh" and not self.ishzero:
                 self.Oh = p.value
             elif p.name == "Oe":
                 self.Oe = p.value
@@ -279,14 +283,20 @@ class DFTw1l2Cosmology(DFTCosmology):
     With ``fixfsc=False``, also marginalizes over alpha_fsc as a
     calibration nuisance (gamma factor on the FSC observable),
     symmetric with the GR LCDM_fsc treatment.
+    With ``ishzero=True``, drops Omega_h from the free-parameter list.
     """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value,
-                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+                 alpha_fsc=alpha_fsc_par.value,
+                 ishzero=False, fixfsc=True):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=1.0, l=2.0,
-                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
-        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par]
+                              alpha_fsc=alpha_fsc,
+                              ishzero=ishzero, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par]
+        if not ishzero:
+            base_params.append(dft_Oh_par)
+        base_params.append(dft_Oe_par)
         if not fixfsc:
             base_params = base_params + [alpha_fsc_par]
         self.parameters = base_params
@@ -304,15 +314,21 @@ class DFTl3w1Cosmology(DFTCosmology):
 
     With ``fixfsc=False``, also marginalizes over alpha_fsc (gamma factor
     on the FSC observable), symmetric with LCDM_fsc.
+    With ``ishzero=True``, drops Omega_h from the free-parameter list.
     """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
-                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+                 alpha_fsc=alpha_fsc_par.value,
+                 ishzero=False, fixfsc=True):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w,
                               l=3.0*w - 1.0,
-                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
-        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+                              alpha_fsc=alpha_fsc,
+                              ishzero=ishzero, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par]
+        if not ishzero:
+            base_params.append(dft_Oh_par)
+        base_params += [dft_Oe_par, dft_w_par]
         if not fixfsc:
             base_params = base_params + [alpha_fsc_par]
         self.parameters = base_params
@@ -329,14 +345,20 @@ class DFTl2wCosmology(DFTCosmology):
 
     With ``fixfsc=False``, also marginalizes over alpha_fsc (gamma factor
     on the FSC observable), symmetric with LCDM_fsc.
+    With ``ishzero=True``, drops Omega_h from the free-parameter list.
     """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
-                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+                 alpha_fsc=alpha_fsc_par.value,
+                 ishzero=False, fixfsc=True):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=2.0*w,
-                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
-        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+                              alpha_fsc=alpha_fsc,
+                              ishzero=ishzero, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par]
+        if not ishzero:
+            base_params.append(dft_Oh_par)
+        base_params += [dft_Oe_par, dft_w_par]
         if not fixfsc:
             base_params = base_params + [alpha_fsc_par]
         self.parameters = base_params
@@ -353,14 +375,20 @@ class DFTl0Cosmology(DFTCosmology):
 
     With ``fixfsc=False``, also marginalizes over alpha_fsc (gamma factor
     on the FSC observable), symmetric with LCDM_fsc.
+    With ``ishzero=True``, drops Omega_h from the free-parameter list.
     """
 
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
-                 alpha_fsc=alpha_fsc_par.value, fixfsc=True):
+                 alpha_fsc=alpha_fsc_par.value,
+                 ishzero=False, fixfsc=True):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=0.0,
-                              alpha_fsc=alpha_fsc, fixfsc=fixfsc)
-        base_params = [h_par, Ok_par, dft_Oh_par, dft_Oe_par, dft_w_par]
+                              alpha_fsc=alpha_fsc,
+                              ishzero=ishzero, fixfsc=fixfsc)
+        base_params = [h_par, Ok_par]
+        if not ishzero:
+            base_params.append(dft_Oh_par)
+        base_params += [dft_Oe_par, dft_w_par]
         if not fixfsc:
             base_params = base_params + [alpha_fsc_par]
         self.parameters = base_params

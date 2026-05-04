@@ -8,7 +8,7 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 def run_sequence():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_files = [os.path.join(script_dir, f) for f in ['baseConfig.ini', 'baseConfig1.ini', 'baseConfig2.ini']]
+    config_files = [os.path.join(script_dir, f) for f in ['baseConfig.ini', 'baseConfig1.ini']]
 
     print(f"Starting sequential run for: {config_files}")
 

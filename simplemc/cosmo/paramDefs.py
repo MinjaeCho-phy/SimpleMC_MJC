@@ -29,7 +29,7 @@ Nnu_par = Parameter("Nnu", 3.046, 0.5, (3.0, 3.1), "N_{\\rm eff}")
 # Curvature and DE equation of state.
 # Ok_par = Parameter("Ok", 0.0, 0.001, (-0.1, 0.1), "\Omega_k") # For GR
 # Ok_par = Parameter("Ok", 1.0, 0.001, (-2.0, 2.0), "\Omega_k") # For DFT (old wide prior)
-Ok_par = Parameter("Ok", 1.0, 0.001, (0.9, 1.1), "\Omega_k") # For DFT (tightened per FSC sensitivity, 2026-04-30)
+Ok_par = Parameter("Ok", 1.0, 0.001, (0.97, 1.03), "\Omega_k") # For DFT (tightened per FSC sensitivity, 2026-04-30)
 
 # Sigma 8 parameter (required by BaseCosmology)
 s8_par = Parameter("s8", 0.8, 0.01, (0.5, 1.0), "s8")
@@ -52,8 +52,8 @@ MB_par = Parameter("MB", -19.25, 0.01, (-20,-18.5), "M_B")
 # Old wide-prior values are kept commented for reproducibility.
 # dft_Oh_par = Parameter("Oh", 0.1, 0.1, (0.0,10.0), "\Omega_{\mathfrak{h}}")
 # dft_Oe_par = Parameter("Oe", 0.1, 0.1, (0.0,10.0), "\Omega_{\varepsilon}")
-dft_Oh_par = Parameter("Oh", 0.0, 1e-4, (-1e-3, 1e-3), "\Omega_{\mathfrak{h}}")
-dft_OL_par = Parameter("OL", 0.1, 0.1, (-10.0,10.0), "\Omega_{\Lambda}")
-dft_Oe_par = Parameter("Oe", 0.1, 0.05, (-0.005, 0.5), "\Omega_{\\varepsilon}")
+dft_Oh_par = Parameter("Oh", 0.0, 1e-4, (0.0, 0.001), "\Omega_{\mathfrak{h}}")
+dft_OL_par = Parameter("OL", 0.01, 0.01, (0.0,0.1), "\Omega_{\Lambda}")
+dft_Oe_par = Parameter("Oe", 0.01, 0.01, (0.0, 0.1), "\Omega_{\\varepsilon}")
 dft_w_par  = Parameter("w_dft", 0.3, 1.0, (-10.0,10.0), "w")
 dft_l_par  = Parameter("l_dft", 0.0, 2.0, (-10.0,10.0), "\lambda")
