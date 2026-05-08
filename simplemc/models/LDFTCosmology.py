@@ -214,7 +214,7 @@ class LDFTw1l2Cosmology(LDFTCosmology):
 
 
 class LDFTl3w1Cosmology(LDFTCosmology):
-    """LDFT with constraint l = 3w + 1. Free: h, Ok, Oh, OL, Oe, w (+ alpha_fsc if fixfsc=False).
+    """LDFT with constraint l = 3w - 1. Free: h, Ok, Oh, OL, Oe, w (+ alpha_fsc if fixfsc=False).
 
     With ``ishzero=True``, drops Omega_h from the free-parameter list.
     """
@@ -224,7 +224,7 @@ class LDFTl3w1Cosmology(LDFTCosmology):
                  alpha_fsc=alpha_fsc_par.value,
                  ishzero=False, fixfsc=False):
         LDFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, OL=OL, Oe=Oe, w=w,
-                               l=3.0*w + 1.0, alpha_fsc=alpha_fsc,
+                               l=3.0*w - 1.0, alpha_fsc=alpha_fsc,
                                ishzero=ishzero, fixfsc=fixfsc)
         base_params = [h_par, Ok_par]
         if not ishzero:
@@ -238,7 +238,7 @@ class LDFTl3w1Cosmology(LDFTCosmology):
         ok = LDFTCosmology.updateParams(self, pars)
         if not ok:
             return False
-        self.l = 3.0 * self.w + 1.0
+        self.l = 3.0 * self.w - 1.0
         self.initialize()
         return True
 
