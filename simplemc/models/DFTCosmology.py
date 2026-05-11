@@ -161,7 +161,7 @@ class DFTCosmology(BaseCosmology):
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value, l=dft_l_par.value,
                  alpha_fsc=alpha_fsc_par.value,
-                 ishzero=False, fixfsc=True):
+                 ishzero=False, fixfsc=False):
         self.Ok = Ok
         self.ishzero = ishzero
         self.Oh = 0.0 if ishzero else Oh
@@ -289,7 +289,7 @@ class DFTw1l2Cosmology(DFTCosmology):
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value,
                  alpha_fsc=alpha_fsc_par.value,
-                 ishzero=False, fixfsc=True):
+                 ishzero=False, fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=1.0, l=2.0,
                               alpha_fsc=alpha_fsc,
                               ishzero=ishzero, fixfsc=fixfsc)
@@ -320,7 +320,7 @@ class DFTl3w1Cosmology(DFTCosmology):
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
                  alpha_fsc=alpha_fsc_par.value,
-                 ishzero=False, fixfsc=True):
+                 ishzero=False, fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w,
                               l=3.0*w - 1.0,
                               alpha_fsc=alpha_fsc,
@@ -351,7 +351,7 @@ class DFTl2wCosmology(DFTCosmology):
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
                  alpha_fsc=alpha_fsc_par.value,
-                 ishzero=False, fixfsc=True):
+                 ishzero=False, fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=2.0*w,
                               alpha_fsc=alpha_fsc,
                               ishzero=ishzero, fixfsc=fixfsc)
@@ -381,7 +381,7 @@ class DFTl0Cosmology(DFTCosmology):
     def __init__(self, h=h_par.value, Ok=Ok_par.value, Oh=dft_Oh_par.value,
                  Oe=dft_Oe_par.value, w=dft_w_par.value,
                  alpha_fsc=alpha_fsc_par.value,
-                 ishzero=False, fixfsc=True):
+                 ishzero=False, fixfsc=False):
         DFTCosmology.__init__(self, h=h, Ok=Ok, Oh=Oh, Oe=Oe, w=w, l=0.0,
                               alpha_fsc=alpha_fsc,
                               ishzero=ishzero, fixfsc=fixfsc)
