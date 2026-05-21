@@ -36,7 +36,7 @@ from .nestedsamplers import (UnitCubeSampler, SingleEllipsoidSampler,
                              MultiEllipsoidSampler, RadFriendsSampler,
                              SupFriendsSampler)
 from .results import Results, print_fn
-from .utils import kld_error
+from .utils import kld_error, _safe_lzterm
 
 __all__ = ["DynamicSampler", "weight_function", "stopping_function",
            "_kld_error"]
@@ -560,7 +560,7 @@ class DynamicSampler(object):
                        ('logl', np.array(self.saved_logl)),
                        ('logvol', np.array(self.saved_logvol)),
                        ('logz', np.array(self.saved_logz)),
-                       ('logzerr', np.sqrt(np.array(self.saved_logzvar))),
+                       ('logzerr', np.sqrt(np.clip(np.array(self.saved_logzvar), 0., None))),
                        ('information', np.array(self.saved_h)),
                        ('batch_nlive', np.array(self.saved_batch_nlive,
                                                 dtype='int')),
@@ -1392,15 +1392,17 @@ class DynamicSampler(object):
             logdvol, dlv = logdvols[i], dlvs[i]
             logwt = np.logaddexp(loglstar_new, loglstar) + logdvol
             logz_new = np.logaddexp(logz, logwt)
-            lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                      math.exp(loglstar_new - logz_new) * loglstar_new)
+            lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
             h_new = (math.exp(logdvol) * lzterm +
                      math.exp(logz - logz_new) * (h + logz) -
                      logz_new)
+            if not np.isfinite(h_new):
+                h_new = h
             dh = h_new - h
             h = h_new
             logz = logz_new
-            logzvar += 2. * dh * dlv
+            if np.isfinite(2. * dh * dlv):
+                logzvar += 2. * dh * dlv
             loglstar = loglstar_new
             self.saved_logwt.append(logwt)
             self.saved_logz.append(logz)

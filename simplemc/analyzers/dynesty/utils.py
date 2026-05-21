@@ -22,6 +22,26 @@ import copy
 
 from .results import Results
 
+
+def _safe_lzterm(loglstar, loglstar_new, logz_new):
+    """`lzterm` for the information recursion, robust to extreme loglike.
+
+    `math.exp` raises OverflowError for large positive `loglstar - logz_new`;
+    an extreme-negative loglike (or the -1e300 sentinel dynesty uses for -inf)
+    can also make the product non-finite. In both cases the point's true
+    posterior-weighted contribution is negligible, so fall back to 0.
+    Bit-for-bit identical to the original expression when both products are
+    finite.
+    """
+    try:
+        term = (math.exp(loglstar - logz_new) * loglstar +
+                math.exp(loglstar_new - logz_new) * loglstar_new)
+    except OverflowError:
+        return 0.
+    if not np.isfinite(term):
+        return 0.
+    return term
+
 __all__ = ["unitcheck", "resample_equal", "mean_and_cov", "quantile",
            "jitter_run", "resample_run", "simulate_run", "reweight_run",
            "unravel_run", "merge_runs", "kl_divergence", "kld_error",
@@ -378,15 +398,17 @@ def jitter_run(res, rstate=None, approx=False):
         logdvol, dlv = logdvols[i], dlvs[i]
         logwt = np.logaddexp(loglstar_new, loglstar) + logdvol
         logz_new = np.logaddexp(logz, logwt)
-        lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                  math.exp(loglstar_new - logz_new) * loglstar_new)
+        lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
         h_new = (math.exp(logdvol) * lzterm +
                  math.exp(logz - logz_new) * (h + logz) -
                  logz_new)
+        if not np.isfinite(h_new):
+            h_new = h
         dh = h_new - h
         h = h_new
         logz = logz_new
-        logzvar += dh * dlv
+        if np.isfinite(dh * dlv):
+            logzvar += dh * dlv
         loglstar = loglstar_new
         saved_logwt.append(logwt)
         saved_logz.append(logz)
@@ -402,7 +424,7 @@ def jitter_run(res, rstate=None, approx=False):
     new_res.logz = np.array(saved_logz)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        new_res.logzerr = np.sqrt(np.array(saved_logzvar))
+        new_res.logzerr = np.sqrt(np.clip(np.array(saved_logzvar), 0., None))
     new_res.h = np.array(saved_h)
 
     return new_res
@@ -562,15 +584,17 @@ def resample_run(res, rstate=None, return_idx=False):
         logdvol, dlv = logdvols[i], dlvs[i]
         logwt = np.logaddexp(loglstar_new, loglstar) + logdvol
         logz_new = np.logaddexp(logz, logwt)
-        lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                  math.exp(loglstar_new - logz_new) * loglstar_new)
+        lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
         h_new = (math.exp(logdvol) * lzterm +
                  math.exp(logz - logz_new) * (h + logz) -
                  logz_new)
+        if not np.isfinite(h_new):
+            h_new = h
         dh = h_new - h
         h = h_new
         logz = logz_new
-        logzvar += dh * dlv
+        if np.isfinite(dh * dlv):
+            logzvar += dh * dlv
         loglstar = loglstar_new
         saved_logwt.append(logwt)
         saved_logz.append(logz)
@@ -598,7 +622,7 @@ def resample_run(res, rstate=None, return_idx=False):
     new_res.logz = np.array(saved_logz)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        new_res.logzerr = np.sqrt(np.array(saved_logzvar))
+        new_res.logzerr = np.sqrt(np.clip(np.array(saved_logzvar), 0., None))
     new_res.h = np.array(saved_h)
 
     if return_idx:
@@ -703,17 +727,19 @@ def reweight_run(res, logp_new, logp_old=None):
         logwt = np.logaddexp(loglstar_new, loglstar) + logdvol + logrwt[i]
         logz_new = np.logaddexp(logz, logwt)
         try:
-            lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                      math.exp(loglstar_new - logz_new) * loglstar_new)
+            lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
         except:
             lzterm = 0.
         h_new = (math.exp(logdvol) * lzterm +
                  math.exp(logz - logz_new) * (h + logz) -
                  logz_new)
+        if not np.isfinite(h_new):
+            h_new = h
         dh = h_new - h
         h = h_new
         logz = logz_new
-        logzvar += dh * dlv
+        if np.isfinite(dh * dlv):
+            logzvar += dh * dlv
         loglstar = loglstar_new
         saved_logwt.append(logwt)
         saved_logz.append(logz)
@@ -726,7 +752,7 @@ def reweight_run(res, logp_new, logp_old=None):
     # Overwrite items with our new estimates.
     new_res.logwt = np.array(saved_logwt)
     new_res.logz = np.array(saved_logz)
-    new_res.logzerr = np.sqrt(np.array(saved_logzvar))
+    new_res.logzerr = np.sqrt(np.clip(np.array(saved_logzvar), 0., None))
     new_res.h = np.array(saved_h)
 
     return new_res
@@ -814,15 +840,17 @@ def unravel_run(res, save_proposals=True, print_progress=True):
             logdvol, dlv = logdvols[i], dlvs[i]
             logwt = np.logaddexp(loglstar_new, loglstar) + logdvol
             logz_new = np.logaddexp(logz, logwt)
-            lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                      math.exp(loglstar_new - logz_new) * loglstar_new)
+            lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
             h_new = (math.exp(logdvol) * lzterm +
                      math.exp(logz - logz_new) * (h + logz) -
                      logz_new)
+            if not np.isfinite(h_new):
+                h_new = h
             dh = h_new - h
             h = h_new
             logz = logz_new
-            logzvar += dh * dlv
+            if np.isfinite(dh * dlv):
+                logzvar += dh * dlv
             loglstar = loglstar_new
             saved_logwt.append(logwt)
             saved_logz.append(logz)
@@ -845,7 +873,7 @@ def unravel_run(res, save_proposals=True, print_progress=True):
              ('logl', logl),
              ('logvol', logvol),
              ('logz', np.array(saved_logz)),
-             ('logzerr', np.sqrt(np.array(saved_logzvar))),
+             ('logzerr', np.sqrt(np.clip(np.array(saved_logzvar), 0., None))),
              ('h', np.array(saved_h))]
 
         # Add proposal information (if available).
@@ -1392,15 +1420,17 @@ def _merge_two(res1, res2, compute_aux=False):
             logdvol, dlv = logdvols[i], dlvs[i]
             logwt = np.logaddexp(loglstar_new, loglstar) + logdvol
             logz_new = np.logaddexp(logz, logwt)
-            lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                      math.exp(loglstar_new - logz_new) * loglstar_new)
+            lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
             h_new = (math.exp(logdvol) * lzterm +
                      math.exp(logz - logz_new) * (h + logz) -
                      logz_new)
+            if not np.isfinite(h_new):
+                h_new = h
             dh = h_new - h
             h = h_new
             logz = logz_new
-            logzvar += dh * dlv
+            if np.isfinite(dh * dlv):
+                logzvar += dh * dlv
             loglstar = loglstar_new
             combined_logwt.append(logwt)
             combined_logz.append(logz)
@@ -1415,7 +1445,7 @@ def _merge_two(res1, res2, compute_aux=False):
         # Add to our results.
         r.append(('logwt', np.array(combined_logwt)))
         r.append(('logz', np.array(combined_logz)))
-        r.append(('logzerr', np.sqrt(np.array(combined_logzvar))))
+        r.append(('logzerr', np.sqrt(np.clip(np.array(combined_logzvar), 0., None))))
         r.append(('h', np.array(combined_h)))
         r.append(('batch_nlive', np.array(batch_nlive, dtype='int')))
 
