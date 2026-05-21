@@ -3,10 +3,10 @@ import sys
 
 # Cosmologies already included
 from .models import LCDMCosmology
-from .models.LDFTCosmology import LDFTCosmology, LDFTw1l2Cosmology, LDFTl3w1Cosmology, LDFTl2wCosmology, LDFTl0Cosmology
-from .models.DFT_fix import DFTCosmology, DFTw1l2Cosmology, DFTl3w1Cosmology, DFTl2wCosmology, DFTl0Cosmology
-from .models.DFT2Cosmology import DFT2Cosmology
+# Unified DFT/LDFT model: DFTCosmology(varyOL=False) == DFT, varyOL=True == LDFT.
+from .models.DFTCosmology import DFTCosmology, DFTw1l2Cosmology, DFTl3w1Cosmology, DFTl2wCosmology, DFTl0Cosmology
 from .models.DFTVacuum import DFTVacuum
+from .models.DFTMatterRadiation import DFTMatterRadiation
 from .models.wCDMCosmology import wCDMCosmology
 from .models.owa0CDMCosmology import owa0CDMCosmology
 
@@ -72,51 +72,58 @@ def ParseModel(model, **kwargs):
         T = wCDMCosmology()
     elif model == "owa0CDM":
         T = owa0CDMCosmology()
+    elif model == "wa0CDM":
+        # Flat CPL: w0+wa free, Ok forced to 0 (overrides Ok_par.value=1.0
+        # DFT-fork default). w0/wa bounds inherited from paramDefs.
+        T = owa0CDMCosmology(varyOk=False)
+        T.Ok = 0.0
+        T.setCurvature(0.0)
     # DFT-family naming convention:
     #   bare name   → fixfsc=False, ishzero=False (alpha_fsc free, Oh free; default)
     #   _fsc suffix → fixfsc=True  (alpha_fsc held at lab value)
     #   _noh suffix → ishzero=True (Omega_h fixed to 0, dropped from free list)
     #   suffixes combine, e.g. _noh_fsc.
+    # LDFT* == DFT* with the cosmological constant turned on (varyOL=True).
     elif model == "LDFT":
-        T = LDFTCosmology()
+        T = DFTCosmology(varyOL=True)
     elif model == "LDFT_fsc":
-        T = LDFTCosmology(fixfsc=True)
+        T = DFTCosmology(varyOL=True, fixfsc=True)
     elif model == "LDFT_noh":
-        T = LDFTCosmology(ishzero=True)
+        T = DFTCosmology(varyOL=True, ishzero=True)
     elif model == "LDFT_noh_fsc":
-        T = LDFTCosmology(ishzero=True, fixfsc=True)
+        T = DFTCosmology(varyOL=True, ishzero=True, fixfsc=True)
     elif model == "LDFT_w1l2":
-        T = LDFTw1l2Cosmology()
+        T = DFTw1l2Cosmology(varyOL=True)
     elif model == "LDFT_w1l2_fsc":
-        T = LDFTw1l2Cosmology(fixfsc=True)
+        T = DFTw1l2Cosmology(varyOL=True, fixfsc=True)
     elif model == "LDFT_w1l2_noh":
-        T = LDFTw1l2Cosmology(ishzero=True)
+        T = DFTw1l2Cosmology(varyOL=True, ishzero=True)
     elif model == "LDFT_w1l2_noh_fsc":
-        T = LDFTw1l2Cosmology(ishzero=True, fixfsc=True)
+        T = DFTw1l2Cosmology(varyOL=True, ishzero=True, fixfsc=True)
     elif model == "LDFT_l3w1":
-        T = LDFTl3w1Cosmology()
+        T = DFTl3w1Cosmology(varyOL=True)
     elif model == "LDFT_l3w1_fsc":
-        T = LDFTl3w1Cosmology(fixfsc=True)
+        T = DFTl3w1Cosmology(varyOL=True, fixfsc=True)
     elif model == "LDFT_l3w1_noh":
-        T = LDFTl3w1Cosmology(ishzero=True)
+        T = DFTl3w1Cosmology(varyOL=True, ishzero=True)
     elif model == "LDFT_l3w1_noh_fsc":
-        T = LDFTl3w1Cosmology(ishzero=True, fixfsc=True)
+        T = DFTl3w1Cosmology(varyOL=True, ishzero=True, fixfsc=True)
     elif model == "LDFT_l2w":
-        T = LDFTl2wCosmology()
+        T = DFTl2wCosmology(varyOL=True)
     elif model == "LDFT_l2w_fsc":
-        T = LDFTl2wCosmology(fixfsc=True)
+        T = DFTl2wCosmology(varyOL=True, fixfsc=True)
     elif model == "LDFT_l2w_noh":
-        T = LDFTl2wCosmology(ishzero=True)
+        T = DFTl2wCosmology(varyOL=True, ishzero=True)
     elif model == "LDFT_l2w_noh_fsc":
-        T = LDFTl2wCosmology(ishzero=True, fixfsc=True)
+        T = DFTl2wCosmology(varyOL=True, ishzero=True, fixfsc=True)
     elif model == "LDFT_l0":
-        T = LDFTl0Cosmology()
+        T = DFTl0Cosmology(varyOL=True)
     elif model == "LDFT_l0_fsc":
-        T = LDFTl0Cosmology(fixfsc=True)
+        T = DFTl0Cosmology(varyOL=True, fixfsc=True)
     elif model == "LDFT_l0_noh":
-        T = LDFTl0Cosmology(ishzero=True)
+        T = DFTl0Cosmology(varyOL=True, ishzero=True)
     elif model == "LDFT_l0_noh_fsc":
-        T = LDFTl0Cosmology(ishzero=True, fixfsc=True)
+        T = DFTl0Cosmology(varyOL=True, ishzero=True, fixfsc=True)
     elif model == "DFT":
         T = DFTCosmology()
     elif model == "DFT_fsc":
@@ -157,8 +164,9 @@ def ParseModel(model, **kwargs):
         T = DFTl0Cosmology(ishzero=True)
     elif model == "DFT_l0_noh_fsc":
         T = DFTl0Cosmology(ishzero=True, fixfsc=True)
+    # DFT2 == l=0 with the cosmological constant on (== LDFT_l0).
     elif model == "DFT2":
-        T = DFT2Cosmology()
+        T = DFTl0Cosmology(varyOL=True)
     elif model == "DFTvac":
         T = DFTVacuum()
     elif model == "DFTvac_fsc":
@@ -177,6 +185,16 @@ def ParseModel(model, **kwargs):
         T = DFTVacuum(ishzero=True)
     elif model == "DFT1vac_noh_fsc":
         T = DFTVacuum(ishzero=True, fixfsc=True)
+    # DFTmr: "full matter universe" — two critical-line (l=3w-1) species,
+    # dust (w=1,l=2) + radiation (w=1/3,l=0), on the Ok+Oh DFT background.
+    elif model == "DFTmr":
+        T = DFTMatterRadiation()
+    elif model == "DFTmr_fsc":
+        T = DFTMatterRadiation(fixfsc=True)
+    elif model == "DFTmr_noh":
+        T = DFTMatterRadiation(ishzero=True)
+    elif model == "DFTmr_noh_fsc":
+        T = DFTMatterRadiation(ishzero=True, fixfsc=True)
     elif model == 'simple':
         T = SimpleModel(custom_parameters, custom_function)
     elif model == 'simple_cosmo':

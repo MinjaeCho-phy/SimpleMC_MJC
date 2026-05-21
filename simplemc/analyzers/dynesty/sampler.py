@@ -38,6 +38,26 @@ SQRTEPS = math.sqrt(float(np.finfo(np.float64).eps))
 MAXINT = 2**32 - 1
 
 
+def _safe_lzterm(loglstar, loglstar_new, logz_new):
+    """`lzterm` for the information recursion, robust to extreme loglike.
+
+    `math.exp` raises OverflowError when `loglstar - logz_new` is large and
+    positive; an extreme-negative loglike (e.g. a huge chi^2, or the -1e300
+    sentinel dynesty substitutes for -inf) can also make the product
+    non-finite. In both cases the point's true posterior-weighted contribution
+    is negligible, so fall back to 0. Bit-for-bit identical to the original
+    expression whenever both products are finite.
+    """
+    try:
+        term = (math.exp(loglstar - logz_new) * loglstar +
+                math.exp(loglstar_new - logz_new) * loglstar_new)
+    except OverflowError:
+        return 0.
+    if not np.isfinite(term):
+        return 0.
+    return term
+
+
 class Sampler(object):
     """
     The basic sampler object that performs the actual nested sampling.
@@ -234,6 +254,16 @@ class Sampler(object):
 
         # Add all saved samples to the results.
         if self.save_samples:
+            # logzvar is a variance and must be >= 0; catastrophic cancellation
+            # from extreme-negative log-likelihoods (e.g. dynesty's -1e300
+            # sentinel for -inf/nan) can drive it negative, which would make
+            # sqrt() -> nan. Clamp to 0 so logzerr stays finite, and flag it.
+            _logzvar = np.array(self.saved_logzvar)
+            if np.any(_logzvar < 0.):
+                warnings.warn("Negative logzvar from extreme log-likelihood "
+                              "values; clamped to 0 (logzerr may be "
+                              "underestimated for affected iterations).")
+            _logzerr = np.sqrt(np.clip(_logzvar, 0., None))
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 results = [('nlive', self.nlive),
@@ -248,7 +278,7 @@ class Sampler(object):
                            ('logl', np.array(self.saved_logl)),
                            ('logvol', np.array(self.saved_logvol)),
                            ('logz', np.array(self.saved_logz)),
-                           ('logzerr', np.sqrt(np.array(self.saved_logzvar))),
+                           ('logzerr', _logzerr),
                            ('information', np.array(self.saved_h))]
         else:
             raise ValueError("You didn't save any samples!")
@@ -473,15 +503,21 @@ class Sampler(object):
             # Compute relative contribution to results.
             logwt = np.logaddexp(float(loglstar_new), float(loglstar)) + logdvol  # weight
             logz_new = np.logaddexp(float(logz), float(logwt))  # ln(evidence)
-            lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                      math.exp(loglstar_new - logz_new) * loglstar_new)
+            lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
             h_new = (math.exp(logdvol) * lzterm +
                      math.exp(logz - logz_new) * (h + logz) -
                      logz_new)  # information
             dh = h_new - h
+            # Guard against extreme-negative loglike driving h to +/-inf and
+            # turning dh into inf-inf = nan (see _safe_lzterm). No-op when finite.
+            if not np.isfinite(h_new):
+                h_new = h
+                dh = 0.
             h = h_new
             logz = logz_new
-            logzvar += 2. * dh * dlv  # var[ln(evidence)] estimate
+            dlogzvar = 2. * dh * dlv  # var[ln(evidence)] estimate
+            if np.isfinite(dlogzvar):
+                logzvar += dlogzvar
             loglstar = loglstar_new
             logz_remain = loglmax + logvol  # remaining ln(evidence)
             delta_logz = np.logaddexp(float(logz), float(logz_remain)) - logz  # dlogz
@@ -793,15 +829,24 @@ class Sampler(object):
 
             # Update evidence `logz` and information `h`.
             logz_new = np.logaddexp(float(logz), float(logwt))
-            lzterm = (math.exp(loglstar - logz_new) * loglstar +
-                      math.exp(loglstar_new - logz_new) * loglstar_new)
+            lzterm = _safe_lzterm(loglstar, loglstar_new, logz_new)
             h_new = (math.exp(logdvol) * lzterm +
                      math.exp(logz - logz_new) * (h + logz) -
                      logz_new)
             dh = h_new - h
+            # An extreme-negative loglike (a huge chi^2, or the -1e300 sentinel
+            # dynesty substitutes for -inf) carries negligible posterior weight
+            # but can drive the information `h` to +/-inf, making
+            # `dh = h_new - h` an inf-inf = nan that poisons logzvar (and hence
+            # logzerr). Carry `h` forward in that case. No-op when h_new finite.
+            if not np.isfinite(h_new):
+                h_new = h
+                dh = 0.
             h = h_new
             logz = logz_new
-            logzvar += 2. * dh * self.dlv
+            dlogzvar = 2. * dh * self.dlv
+            if np.isfinite(dlogzvar):
+                logzvar += dlogzvar
             loglstar = loglstar_new
 
             # Compute bound index at the current iteration.

@@ -29,7 +29,7 @@ Nnu_par = Parameter("Nnu", 3.046, 0.5, (3.0, 3.1), "N_{\\rm eff}")
 # Curvature and DE equation of state.
 # Ok_par = Parameter("Ok", 0.0, 0.001, (-0.1, 0.1), "\Omega_k") # For GR
 # Ok_par = Parameter("Ok", 1.0, 0.001, (-2.0, 2.0), "\Omega_k") # For DFT (old wide prior)
-Ok_par = Parameter("Ok", 1.0, 0.001, (0.97, 1.03), "\Omega_k") # For DFT (tightened per FSC sensitivity, 2026-04-30)
+Ok_par = Parameter("Ok", 1.0, 0.001, (0.9999, 1.0001), "\Omega_k") # For DFT (tightened per FSC sensitivity, 2026-04-30)
 
 # Sigma 8 parameter (required by BaseCosmology)
 s8_par = Parameter("s8", 0.8, 0.01, (0.5, 1.0), "s8")
@@ -52,8 +52,19 @@ MB_par = Parameter("MB", -19.25, 0.01, (-20,-18.5), "M_B")
 # Old wide-prior values are kept commented for reproducibility.
 # dft_Oh_par = Parameter("Oh", 0.1, 0.1, (0.0,10.0), "\Omega_{\mathfrak{h}}")
 # dft_Oe_par = Parameter("Oe", 0.1, 0.1, (0.0,10.0), "\Omega_{\varepsilon}")
-dft_Oh_par = Parameter("Oh", 0.0, 1e-4, (0.0, 0.001), "\Omega_{\mathfrak{h}}")
-dft_OL_par = Parameter("OL", 0.01, 0.01, (-0.1,0.1), "\Omega_{\Lambda}")
-dft_Oe_par = Parameter("Oe", 0.01, 0.01, (0.0, 0.1), "\Omega_{\\varepsilon}")
-dft_w_par  = Parameter("w_dft", 0.3, 1.0, (-0.5,1.5), "w")
-dft_l_par  = Parameter("l_dft", 0.0, 2.0, (-0.5,2.5), "\lambda")
+dft_Oh_par = Parameter("Oh", 0.0, 0.000001, (-0.0001, 0.0001), "\Omega_{\mathfrak{h}}")
+dft_OL_par = Parameter("OL", 0.1, 0.1, (-0.5,0.5), "\Omega_{\Lambda}")
+dft_Oe_par = Parameter("Oe", 0.0, 0.00001, (-0.00001, 0.00001), "\Omega_{\\varepsilon}")
+dft_w_par  = Parameter("w_dft", 0.3, 1.0, (-2.5,1.5), "w")
+dft_l_par  = Parameter("l_dft", 0.0, 2.0, (-0.9,4.0), "\lambda")
+
+# Critical-line (l = 3w-1) two-species "full matter" model (DFTMatterRadiation):
+#   Oem = dust       (w=1,   l=2 -> rho ~ (1+z)^3 * e^{phi})
+#   Oer = radiation  (w=1/3, l=0 -> rho ~ (1+z)^4 * e^{2phi})
+# Wide exploratory priors (no Sum=1 closure in this DFT frame). The model
+# recollapses for Ok~1 + appreciable matter, so Ok is given its OWN wide prior
+# (dftmr_Ok_par) rather than the globally-pinned Ok_par; broken points are
+# rejected via prior_loglike. Defaults sit in the non-broken region.
+dft_Oem_par = Parameter("Oem", 0.1,  0.05, (0.0, 2.0), "\\Omega_{em}")
+dft_Oer_par = Parameter("Oer", 1e-3, 1e-3, (0.0, 1.0), "\\Omega_{er}")
+dftmr_Ok_par = Parameter("Ok", 0.3, 0.05, (0.0, 1.05), "\\Omega_k")
